@@ -9,7 +9,98 @@
 #include <getopt.h>
 #include <string.h>
 #include <sys/stat.h>                           //lstat()
-#include <sys/sysmacros.h>                  
+#include <sys/sysmacros.h>        
+
+int compare(const struct dirent **a, const struct dirent **b);
+int nonCompare (const struct dirent **a, const struct dirent **b);
+void walkInDirectories(char *path, bool symbolicReference, bool directory,
+                       bool files, bool sorting); 
+
+int main(int argc, char* argv[])
+{
+    char * path = "./";
+    int option = 0;
+    int countParams = 0;
+
+    bool symbolicReference = false;
+    bool directory = false;
+    bool files = false;
+    bool sorting = false;
+
+    bool haveParametrs = false;
+
+
+    static struct option long_options[]=
+    {
+        {"l", 0, NULL,'l'},
+        {"d", 0, NULL, 'd'},
+        {"f", 0, NULL, 'f'},
+        {"s", 0, NULL, 's'},
+        {0,0,0,0}
+    };
+
+    for(int i = 1; i < argc; ++i)
+    {
+        if (argv[i][0] != '-')
+        {
+            path = argv[i];
+        }
+    }
+
+    opterr = 0;                                             //чтобы getopt не бросала ошибки
+    while ((option = getopt_long(argc, argv, "ldfs", long_options, NULL)) != -1)
+    {
+        haveParametrs = true;
+        switch (option)
+        {
+        case 'l':
+            symbolicReference = true;
+            countParams++;
+            break;
+        case 'd':
+            directory = true;
+            countParams++;
+            break;
+        case 'f':
+            files = true;
+            countParams++;
+            break;
+        case 's':
+            sorting = true;
+            countParams++;
+            break;      
+        default:
+            printf("Invalid parametrs\n");
+            return -1;
+            break;
+        }
+    }
+
+
+    DIR * dir = opendir(path);
+    if (!dir)
+    {
+        perror("\nNo such directory\n");
+        return -1;
+    }
+    closedir(dir);
+
+
+    printf("\n jfdkfjdkj %d fjkdljflkjd %d", countParams, symbolicReference);
+
+    if ((haveParametrs == false) || ((countParams == 1) && sorting))
+    {
+        symbolicReference = true;
+        directory = true;
+        files = true;
+    }
+
+    walkInDirectories(path, symbolicReference, directory, files, sorting);
+
+    printf("\n");
+
+    return 0;
+}
 
 int compare(const struct dirent **a, const struct dirent **b) {
     return strcoll((*a)->d_name, (*b)->d_name);
@@ -27,7 +118,7 @@ void walkInDirectories(char *path, bool symbolicReference, bool directory,
 
     struct dirent ** catalog;
     size_t n = scandir(path, &catalog, NULL, sorting ? compare : nonCompare);
-
+    char fullPath[256];
     for (size_t i = 0; i < n; i++)
     {
        struct dirent * readFile = catalog[i];
@@ -37,7 +128,7 @@ void walkInDirectories(char *path, bool symbolicReference, bool directory,
             continue;
         }
 
-        char fullPath[256];
+        
         snprintf(fullPath, 256, "%s/%s", path, readFile->d_name);
     
 
@@ -52,88 +143,24 @@ void walkInDirectories(char *path, bool symbolicReference, bool directory,
         {
             if (directory) 
             {
-                printf("\nDirectory: %s", fullPath);
+                printf("\nDirectory     : %s", fullPath);
             }
             walkInDirectories(fullPath, symbolicReference, directory, files, sorting);
         } 
         else if (S_ISREG(fileObject.st_mode) && files) 
         {
-            printf("\nFile     : %s", fullPath);
+            printf("\nFile          : %s", fullPath);
         }
         else if (S_ISLNK(fileObject.st_mode) && symbolicReference)
         {
-            printf("\nSymbolic link: %s", fullPath);
+            printf("\nSymbolic link : %s", fullPath);
         }
     }
     
-}                      
-                                
-
-int main(int argc, char* argv[])
-{
-    char * path = ".";
-    int option = 0;
-
-    int symbolicReference = false;
-    int directory = false;
-    int files = false;
-    int sorting = false;
-
-    bool haveParametrs = false;
-
-    int option_index = 0;
-
-    static struct option long_options[]=
+    for (size_t i = 0; i < n; ++i)
     {
-        {"l", 0, NULL,'l'},
-        {"d", 0, NULL, 'd'},
-        {"f", 0, NULL, 'f'},
-        {"s", 0, NULL, 's'},
-        {0,0,0,0}
-    };
-
-    for(int i = 0; i < argc; ++i)
-    {
-        if (argv[i][0] != '-')
-        {
-            path = argv[i];
-        }
+        free(catalog[i]);
     }
-
-    opterr = 0;                                             //чтобы getopt не бросала ошибки
-    while ((option = getopt_long(argc, argv, "ldfs", long_options, &option_index)) != -1)
-    {
-        haveParametrs = true;
-        switch (option)
-        {
-        case 'l':
-            symbolicReference = true;
-            break;
-        case 'd':
-            directory = true;
-            break;
-        case 'f':
-            files = true;
-            break;
-        case 's':
-            sorting = true;
-            break;      
-        default:
-            printf("Invalid parametrs\n");
-            return -1;
-            break;
-        }
-    }
-
-    if (haveParametrs == false)
-    {
-        symbolicReference = true;
-        directory = true;
-        files = true;
-    }
-
-    walkInDirectories(path, symbolicReference, directory, files, sorting);
-
-    return 0;
-}
+    free(catalog);
+}                
 
