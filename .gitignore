@@ -163,3 +163,4 @@
 *.msc
 *.gmk
 *.mak
+.vscode
