@@ -1,36 +1,15 @@
-#include <sys/types.h>                  
-#include <dirent.h>                             //for DIR
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>                              //for perrror
-#include <stdbool.h>
-#include <unistd.h>                             //for getopt() function and lstat()
-#include <bits/getopt_core.h>                   //for opterr = 0
-#include <getopt.h>
-#include <string.h>
-#include <sys/stat.h>                           //lstat()
-#include <sys/sysmacros.h>        
-
-int compare(const struct dirent **a, const struct dirent **b);
-int nonCompare (const struct dirent **a, const struct dirent **b);
-void walkInDirectories(char *path, bool symbolicReference, bool directory,
-                       bool files, bool sorting); 
+#include "functions.h"
 
 int main(int argc, char* argv[])
 {
     char * path = "./";
     int option = 0;
-    int countParams = 0;
-    int countPaths = 0;
+    int pathCount = 0;
 
-    bool symbolicReference = false;
-    bool directory = false;
-    bool files = false;
-    bool sorting = false;
-
-
-    bool haveParametrs = false;
-
+    bool showSymLinks = false;
+    bool showDirs = false;
+    bool showFiles = false;
+    bool sort = false;
 
     static struct option long_options[]=
     {
@@ -41,49 +20,39 @@ int main(int argc, char* argv[])
         {0,0,0,0}
     };
 
-    for(int i = 1; i < argc; ++i)
-    {
-        if (argv[i][0] != '-')
-        {
-            countPaths++;
-            path = argv[i];
-        }
-    }
-    if (countPaths > 1)
-    {
-        printf("\nPaste one path\n");
-        return -1;
-    }
-
-    opterr = 0;                                             //чтобы getopt не бросала ошибки
     while ((option = getopt_long(argc, argv, "ldfs", long_options, NULL)) != -1)
     {
-        haveParametrs = true;
         switch (option)
         {
         case 'l':
-            symbolicReference = true;
-            countParams++;
+            showSymLinks = true;
             break;
         case 'd':
-            directory = true;
-            countParams++;
+            showDirs = true;
             break;
         case 'f':
-            files = true;
-            countParams++;
+            showFiles = true;
             break;
         case 's':
-            sorting = true;
-            countParams++;
+            sort = true;
             break;      
         default:
-            printf("Invalid parametrs\n");
+            printf("Invalid parameters\n");
             return -1;
-            break;
         }
     }
 
+    for(int i = optind; i < argc; ++i)
+    {
+        pathCount++;
+        path = argv[i];
+    }
+
+    if (pathCount > 1)
+    {
+        printf("\nPlease provide only one path\n");
+        return -1;
+    }
 
     DIR * dir = opendir(path);
     if (!dir)
@@ -93,16 +62,15 @@ int main(int argc, char* argv[])
     }
     closedir(dir);
 
-
-
-    if ((haveParametrs == false) || ((countParams == 1) && sorting))
+    if (!showSymLinks && !showDirs && !showFiles)
     {
-        symbolicReference = true;
-        directory = true;
-        files = true;
+        showSymLinks = true;
+        showDirs = true;
+        showFiles = true;
+        sort = true;
     }
 
-    walkInDirectories(path, symbolicReference, directory, files, sorting);
+    walkInDirectory(path, showSymLinks, showDirs, showFiles, sort);
 
     printf("\n");
 
@@ -110,69 +78,4 @@ int main(int argc, char* argv[])
 }
 
 
-int compare(const struct dirent **a, const struct dirent **b) {
-    return strcoll((*a)->d_name, (*b)->d_name);
-}
-
-int nonCompare (const struct dirent **a, const struct dirent **b)
-{
-    return false;
-}
-
-
-void walkInDirectories(char *path, bool symbolicReference, bool directory,
-                       bool files, bool sorting) 
-{
-
-    struct dirent ** catalog;
-    size_t n = scandir(path, &catalog, NULL, sorting ? compare : nonCompare);
-    if (n < 0 ) {
-        perror("Scandir error");
-        return;
-    }
-    char fullPath[256];
-    for (size_t i = 0; i < n; i++)
-    {
-       struct dirent * readFile = catalog[i];
-       struct stat fileObject;
-
-       if (strcmp(readFile->d_name, ".") == 0 || strcmp(readFile->d_name, "..") == 0) {
-            continue;
-        }
-
-        
-        snprintf(fullPath, 256, "%s/%s", path, readFile->d_name);
-    
-
-        if (lstat(fullPath, &fileObject) == -1) {
-            perror("Lstat error");
-            continue;
-        }
-
-        
-
-        if (S_ISDIR(fileObject.st_mode)) 
-        {
-            if (directory) 
-            {
-                printf("\nDirectory     : %s", fullPath);
-            }
-            walkInDirectories(fullPath, symbolicReference, directory, files, sorting);
-        } 
-        else if (S_ISREG(fileObject.st_mode) && files) 
-        {
-            printf("\nFile          : %s", fullPath);
-        }
-        else if (S_ISLNK(fileObject.st_mode) && symbolicReference)
-        {
-            printf("\nSymbolic link : %s", fullPath);
-        }
-    }
-    
-    for (size_t i = 0; i < n; ++i)
-    {
-        free(catalog[i]);
-    }
-    free(catalog);
-}                
-
+              

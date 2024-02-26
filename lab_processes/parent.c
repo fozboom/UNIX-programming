@@ -1,58 +1,61 @@
 #include "pFunctions.h"
 
-
-
 extern char **environ;
 
+#define CHILD_PATH "CHILD_PATH"
+#define CHILD_PROGRAM_NAME_FORMAT "child_%02zu"
+#define OPTION_GETENV '+'
+#define OPTION_ENVP '*'
+#define OPTION_ENVIRON '&'
+#define OPTION_EXIT 'q'
 
+void printMenu() 
+{
+    printf(PURPLE_COLOR);
+    printf("\n------------------------------------");
+    printf( "  \n|'+' - child process with getenv() |\n"
+                "|'*' - child process with envp[]   |\n"
+                "|'&' - child process with environ  |\n"
+                "|'q' - exit                        |\n");
+    printf("------------------------------------\n> ");
+    printf(DEFAULT_COLOR);
+}
 
 int main(int argc, char* argv[], char* envp[]) 
 {
     printSortingEnviron(environ);
 
-    size_t countChildProcesses = 0;
-    const char* childPathParametr = "CHILD_PATH";
+    size_t childProcessesCount = 0;
 
     while (1) 
     {
-        printf("\033[0;35m");
-        printf("\n------------------------------------");
-        printf( "  \n|'+' - child process with getenv() |\n"
-                    "|'*' - child process with envp[]   |\n"
-                    "|'&' - child process with environ  |\n"
-                    "|'q' - exit                        |\n");
-        printf("------------------------------------\n> ");
+        printMenu();
         int option = getchar();
         getchar();
-
-        printf("\033[0m"); 
-        if (option == 'q') 
+        if (option == OPTION_EXIT) 
         {
             exit(EXIT_SUCCESS);
         }
-        if (option != '+' && option != '*' && option != '&') 
+        if (option != OPTION_GETENV && option != OPTION_ENVP && option != OPTION_ENVIRON) 
         {
             continue;
         }
 
-
         char* childPath = NULL;
         switch (option)
         {
-        case '+':
-            childPath = getenv(childPathParametr);
+        case OPTION_GETENV:
+            childPath = getenv(CHILD_PATH);
             break;
-        case '*':
-            childPath = parsingEnviron(envp, childPathParametr);
+        case OPTION_ENVP:
+            childPath = parsingEnviron(envp, CHILD_PATH);
             break;
-        case '&':
-            childPath = parsingEnviron(environ, childPathParametr);    
+        case OPTION_ENVIRON:
+            childPath = parsingEnviron(environ, CHILD_PATH);    
         default:
             break;
         }
 
-
-        
         pid_t pid = fork();
 
         if (pid == -1)
@@ -62,10 +65,10 @@ int main(int argc, char* argv[], char* envp[])
         }
 
         char childProgramName[9];
-        sprintf(childProgramName, "child_%02zu", countChildProcesses++);
+        sprintf(childProgramName, CHILD_PROGRAM_NAME_FORMAT, childProcessesCount++);
 
         char method[2] = {option, '\0'};
-        char* childArgvParametrs[] = {childProgramName, argv[1],method, NULL};
+        char* childArgvParametrs[] = {childProgramName, argv[1], method, NULL};
 
         if (pid == 0)
         {

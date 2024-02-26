@@ -1,53 +1,50 @@
 #include "pFunctions.h"
 
+
+
 extern char **environ;
 
-
-char* parsingEnviron (char * envp[], const char* parametrName)
+char* parsingEnviron (char * envp[], const char* parameterName)
 {
     while (*envp != NULL)
     {
-        if (strncmp(*envp, parametrName, strlen(parametrName)) == 0)
+        if (strncmp(*envp, parameterName, strlen(parameterName)) == 0)
         {
-            return *envp + strlen(parametrName) + 1;
+            return *envp + strlen(parameterName) + 1;
         }
-
-
         ++envp;
     }
-    
     return NULL;
 }
 
-
-
-int main(int argc, char* argv[], char* envp[]) 
+void printProcessInfo(char* processName)
 {
-    printf("\033[1;32m");   //green
+    printf(GREEN_COLOR);
     printf("------------------------");
-    printf("\nName - %s", argv[0]);
+    printf("\nName - %s", processName);
     printf("\nPid - %d", (int)getpid());
     printf("\nPpid - %d\n", (int)getppid());
     printf("------------------------");
-    printf("\033[0m");
+    printf(DEFAULT_COLOR);
+}
 
-    
-    FILE* file = fopen(argv[1], "r");
+void handleFile(char* fileName, char* envp[])
+{
+    FILE* file = fopen(fileName, "r");
     if (file == NULL)
     {
         printf("\nError opening file");
         exit(EXIT_FAILURE);
     }
     
-    char buffer[80];
+    char buffer[BUFFER_SIZE];
     char* stringPointer = NULL;
     
     while (fgets(buffer, sizeof(buffer), file))
     {
-        
         buffer[strcspn(buffer, "\n")] = '\0';
         
-        switch (argv[2][0])
+        switch (fileName[0])
         {
         case '+':
             stringPointer = getenv(buffer);
@@ -64,7 +61,12 @@ int main(int argc, char* argv[], char* envp[])
         printf("\n%s=%s", buffer, stringPointer);
     }
     fclose(file);
+}
 
+int main(int argc, char* argv[], char* envp[]) 
+{
+    printProcessInfo(argv[0]);
+    handleFile(argv[1], envp);
 
     return 0;
 }
