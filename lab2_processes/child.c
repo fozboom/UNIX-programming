@@ -4,6 +4,7 @@
 
 extern char **environ;
 
+
 char* parsingEnviron (char * envp[], const char* parameterName)
 {
     while (*envp != NULL)
