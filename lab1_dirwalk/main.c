@@ -21,11 +21,13 @@ int main(int argc, char* argv[])
     char * path = "./";
     int option = 0;
     int countParams = 0;
+    int countPaths = 0;
 
     bool symbolicReference = false;
     bool directory = false;
     bool files = false;
     bool sorting = false;
+
 
     bool haveParametrs = false;
 
@@ -43,8 +45,14 @@ int main(int argc, char* argv[])
     {
         if (argv[i][0] != '-')
         {
+            countPaths++;
             path = argv[i];
         }
+    }
+    if (countPaths > 1)
+    {
+        printf("\nPaste one path\n");
+        return -1;
     }
 
     opterr = 0;                                             //чтобы getopt не бросала ошибки
@@ -80,13 +88,12 @@ int main(int argc, char* argv[])
     DIR * dir = opendir(path);
     if (!dir)
     {
-        perror("\nNo such directory\n");
+        printf("\nNo such directory\n");
         return -1;
     }
     closedir(dir);
 
 
-    printf("\n jfdkfjdkj %d fjkdljflkjd %d", countParams, symbolicReference);
 
     if ((haveParametrs == false) || ((countParams == 1) && sorting))
     {
@@ -101,6 +108,7 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
 
 int compare(const struct dirent **a, const struct dirent **b) {
     return strcoll((*a)->d_name, (*b)->d_name);
@@ -118,6 +126,10 @@ void walkInDirectories(char *path, bool symbolicReference, bool directory,
 
     struct dirent ** catalog;
     size_t n = scandir(path, &catalog, NULL, sorting ? compare : nonCompare);
+    if (n < 0 ) {
+        perror("Scandir error");
+        return;
+    }
     char fullPath[256];
     for (size_t i = 0; i < n; i++)
     {
@@ -133,7 +145,7 @@ void walkInDirectories(char *path, bool symbolicReference, bool directory,
     
 
         if (lstat(fullPath, &fileObject) == -1) {
-            perror("lstat");
+            perror("Lstat error");
             continue;
         }
 
