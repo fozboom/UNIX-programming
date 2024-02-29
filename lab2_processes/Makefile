@@ -8,17 +8,20 @@ all: parent child
 parent: parent.o pFunctions.o
 	$(CC) $(CFLAGS) -o parent parent.o pFunctions.o
 
-child: child.o
-	$(CC) $(CFLAGS) -o child child.o
+child: child.o cFunctions.o pFunctions.o 
+	$(CC) $(CFLAGS) -o child child.o cFunctions.o pFunctions.o
 
-parent.o: parent.c pFunctions.h
+parent.o: parent.c pFunctions.h 
 	$(CC) $(CFLAGS) -c -o parent.o parent.c
 
-child.o: child.c
+child.o: child.c cFunctions.h
 	$(CC) $(CFLAGS) -c -o child.o child.c
 
 pFunctions.o: pFunctions.c pFunctions.h
 	$(CC) $(CFLAGS) -c -o pFunctions.o pFunctions.c
+
+cFunctions.o: cFunctions.c cFunctions.h 
+	$(CC) $(CFLAGS) -c -o cFunctions.o cFunctions.c
 
 run:
 	make child

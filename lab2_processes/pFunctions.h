@@ -1,3 +1,6 @@
+#ifndef PFUNCTIONS_H
+#define PFUNCTIONS_H
+
 #include <locale.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -11,6 +14,11 @@
 #define BUFFER_SIZE 80
 #define PURPLE_COLOR "\033[0;35m"
 
+extern char **environ;
+
 int comparator(const void *str1, const void *str2);
 void printSortingEnviron (char* environ[]);
 char* parsingEnviron (char * envp[], const char* parametrName);
+char** createReduceEnv(char * envp[], const char* nameFileWithNamesEnvironParametrs);
+
+#endif //PFUNCTIONS_H

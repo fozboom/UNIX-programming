@@ -1,6 +1,7 @@
 #include "pFunctions.h"
+#include <unistd.h>
 
-extern char **environ;
+
 
 #define CHILD_PATH "CHILD_PATH"
 #define CHILD_PROGRAM_NAME_FORMAT "child_%02zu"
@@ -51,10 +52,12 @@ int main(int argc, char* argv[], char* envp[])
             childPath = parsingEnviron(envp, CHILD_PATH);
             break;
         case OPTION_ENVIRON:
-            childPath = parsingEnviron(environ, CHILD_PATH);    
+            childPath = parsingEnviron(environ, CHILD_PATH); 
+            break;   
         default:
             break;
         }
+    
 
         pid_t pid = fork();
 
@@ -70,10 +73,11 @@ int main(int argc, char* argv[], char* envp[])
         char method[2] = {option, '\0'};
         char* childArgvParametrs[] = {childProgramName, argv[1], method, NULL};
 
+        char** newEnviron = createReduceEnv(envp, argv[1]);
         if (pid == 0)
         {
             printf("\nChild process created.");
-            execve(childPath, childArgvParametrs, envp);
+            execve(childPath, childArgvParametrs, newEnviron);
         }
 
         int processStatus;
