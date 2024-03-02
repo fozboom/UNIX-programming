@@ -1,6 +1,20 @@
 #include "pFunctions.h"
 #include <stdlib.h>
 
+
+
+void printMenu() 
+{
+    printf(PURPLE_COLOR);
+    printf("\n------------------------------------");
+    printf( "  \n|'+' - child process with getenv() |\n"
+                "|'*' - child process with envp[]   |\n"
+                "|'&' - child process with environ  |\n"
+                "|'q' - exit                        |\n");
+    printf("------------------------------------\n> ");
+    printf(DEFAULT_COLOR);
+}
+
 int comparator(const void *str1, const void *str2)
 {
     return strcmp(*(const char **)str1, *(const char **)str2);
@@ -73,7 +87,7 @@ char** createReduceEnv(char * envp[], const char* nameFileWithNamesEnvironParame
         stringPointer = getenv(buffer);
         if (stringPointer == NULL)
         {
-            fprintf(stderr, "Error: environment variable '%s' not found\n", buffer);
+            printf("Error: environment variable '%s' not found\n", buffer);
             continue;
         }
         size_t len = strlen(buffer) + strlen(stringPointer) + 2;

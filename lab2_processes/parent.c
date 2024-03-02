@@ -3,25 +3,6 @@
 
 
 
-#define CHILD_PATH "CHILD_PATH"
-#define CHILD_PROGRAM_NAME_FORMAT "child_%02zu"
-#define OPTION_GETENV '+'
-#define OPTION_ENVP '*'
-#define OPTION_ENVIRON '&'
-#define OPTION_EXIT 'q'
-
-void printMenu() 
-{
-    printf(PURPLE_COLOR);
-    printf("\n------------------------------------");
-    printf( "  \n|'+' - child process with getenv() |\n"
-                "|'*' - child process with envp[]   |\n"
-                "|'&' - child process with environ  |\n"
-                "|'q' - exit                        |\n");
-    printf("------------------------------------\n> ");
-    printf(DEFAULT_COLOR);
-}
-
 int main(int argc, char* argv[], char* envp[]) 
 {
     printSortingEnviron(environ);
