@@ -13,6 +13,7 @@
 #define DEFAULT_COLOR "\033[0m"
 #define BUFFER_SIZE 80
 #define PURPLE_COLOR "\033[0;35m"
+#define BLUE_COLOR "\033[0;34m"
 
 #define CHILD_PATH "CHILD_PATH"
 #define CHILD_PROGRAM_NAME_FORMAT "child_%02zu"

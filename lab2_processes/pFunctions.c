@@ -33,7 +33,7 @@ void printSortingEnviron (char* environ[])
 
     qsort(environ, countEnvironStrings, sizeof(char*), comparator);
 
-    printf("\033[0;34m");  //blue
+    printf(BLUE_COLOR);  
 
 
     for (size_t i = 0; i < countEnvironStrings; i++)
@@ -42,8 +42,7 @@ void printSortingEnviron (char* environ[])
     }
     
 
-    printf("\033[0m");     //default
-    
+    printf(DEFAULT_COLOR);     
 }
 
 
