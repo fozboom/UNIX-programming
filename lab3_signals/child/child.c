@@ -7,23 +7,24 @@ struct Data data;
 struct Statistics statistics;
 bool statistickOutputBlocked = false;
 
-int main(void) {
+int main(int argc, char *argv[]) {
   initializeParentHandler();
 
-  struct itimerval timer;
-  initializeTimer(&timer);
+  initializeTimer();
   while (1) {
     data = zero;
     data = one;
 
     if (countAlarms == COUNT_ALARMS_TO_PRINT_STATISTICS) {
       if (statistickOutputBlocked == false) {
-        printf("\nPPID: %5d, PID: %5d, 00: %5d, 11: %5d, 01: %5d, 10: %5d\n",
-               getppid(), getpid(), statistics.countOfSituation_0_0,
-               statistics.countOfSituation_1_1, statistics.countOfSituation_0_1,
-               statistics.countOfSituation_1_0);
+        printf(
+            "\n %s: PPID: %3d, PID: %3d, 00: %3d, 11: %3d, 01: %3d, 10: %5d\n",
+            argv[0], getppid(), getpid(), statistics.countOfSituation_0_0,
+            statistics.countOfSituation_1_1, statistics.countOfSituation_0_1,
+            statistics.countOfSituation_1_0);
       }
       countAlarms = 0;
+      resetStatistics();
     }
   }
 }
