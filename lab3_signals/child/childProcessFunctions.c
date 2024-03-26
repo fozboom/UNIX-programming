@@ -1,5 +1,6 @@
 #include "childProcessFunctions.h"
 #include <bits/types/siginfo_t.h>
+#include <signal.h>
 
 extern int countAlarms;
 extern struct Data data;
@@ -52,22 +53,11 @@ void parentHandler(int signal, siginfo_t *siginfo, void *context) {
     statistickOutputBlocked = false;
   } else if (signal == SIGALRM) {
     alarmHandler();
-  } else if (signal == SIGCHLD) {
-    /*
-      -1 - ожидать любой дочерний процесс
-      NULL - не сохранять статус завершения
-      WNOHANG - не блокировать вызывающий процесс
-      (чтобы если нет завершенных процессов, то не блокировать вызывающий
-      процесс)
-    */
-    while (waitpid(-1, NULL, WNOHANG) > 0) {
-    }
   }
 }
 
 void initializeParentHandler(void) {
-
-  struct sigaction sa;
+  struct sigaction sa, oldsa;
   /*
     SA_SIGINFO - указывает, что sa_handler указывает на функцию обработчика с
     тремя аргументами (вместо одного аргумента, как в случае с SA_HANDLER)
@@ -75,14 +65,35 @@ void initializeParentHandler(void) {
     быть автоматически возобновлен
     SA_NOLCLDSTOP - указывает, что процесс-родитель не должен получать сигнал
     остановки
+    SA_NOLDCLDWAIT - указывает, что ребенок сам удалится из зомби
   */
-  sa.sa_flags = SA_SIGINFO;
+  sa.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDWAIT;
   sa.sa_sigaction = parentHandler;
   sigemptyset(&sa.sa_mask);
+
+  sigaction(SIGUSR1, NULL, &oldsa);
+  if (oldsa.sa_handler == SIG_IGN) {
+    printf("SIGUSR1 is currently set to be ignored\n");
+  }
   sigaction(SIGUSR1, &sa, NULL);
+
+  sigaction(SIGUSR2, NULL, &oldsa);
+  if (oldsa.sa_handler == SIG_IGN) {
+    printf("SIGUSR2 is currently set to be ignored\n");
+  }
   sigaction(SIGUSR2, &sa, NULL);
+
+  sigaction(SIGALRM, NULL, &oldsa);
+  if (oldsa.sa_handler == SIG_IGN) {
+    printf("SIGALRM is currently set to be ignored\n");
+  }
   sigaction(SIGALRM, &sa, NULL);
-  sigaction(SIGCHLD, &sa, 0);
+
+  sigaction(SIGCHLD, NULL, &oldsa);
+  if (oldsa.sa_handler == SIG_IGN) {
+    printf("SIGCHLD is currently set to be ignored\n");
+  }
+  sigaction(SIGCHLD, &sa, NULL);
 }
 
 void resetStatistics(void) {

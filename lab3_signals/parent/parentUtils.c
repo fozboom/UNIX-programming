@@ -61,7 +61,6 @@ void deleteAllChildProcesses() {
   for (size_t i = 0; i < countCreatedChildProcesses; i++) {
     ChildProcess child = createdChildProcessesPids[i];
     kill(child.pid, SIGTERM);
-    waitpid(child.pid, &status, 0);
     printf("Deleted child process with PID: %d\n", child.pid);
   }
   countCreatedChildProcesses = 0;
@@ -209,9 +208,19 @@ void parentHandler(int signal, siginfo_t *siginfo, void *context) {
 }
 
 void initializeAlarmHandler(void) {
-  struct sigaction sa;
+  struct sigaction sa, tmp;
   sa.sa_sigaction = parentHandler;
   sa.sa_flags = SA_SIGINFO;
+
+  sigaction(SIGALRM, NULL, &tmp);
+  if (tmp.sa_handler == SIG_IGN) {
+    printf("SIGALRM is currently set to be ignored\n");
+  }
   sigaction(SIGALRM, &sa, NULL);
+
+  sigaction(SIGINT, NULL, &tmp);
+  if (tmp.sa_handler == SIG_IGN) {
+    printf("SIGINT is currently set to be ignored\n");
+  }
   sigaction(SIGINT, &sa, NULL);
 }
