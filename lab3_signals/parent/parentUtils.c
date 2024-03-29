@@ -43,8 +43,8 @@ void deleteLastChildProcess() {
   kill(child.pid, SIGTERM);
   int status;
   waitpid(child.pid, &status, 0);
-  printf("Deleted child process with PID: %d. Remaining children: %zu\n",
-         child.pid, countCreatedChildProcesses);
+  printf("Deleted child process %s with PID: %d. Remaining children: %zu\n",
+         child.childName, child.pid, countCreatedChildProcesses);
 }
 
 void listOfChildProcesses(void) {
@@ -61,7 +61,8 @@ void deleteAllChildProcesses() {
   for (size_t i = 0; i < countCreatedChildProcesses; i++) {
     ChildProcess child = createdChildProcessesPids[i];
     kill(child.pid, SIGTERM);
-    printf("Deleted child process with PID: %d\n", child.pid);
+    printf("Deleted child process %s with PID: %d\n", child.childName,
+           child.pid);
   }
   countCreatedChildProcesses = 0;
 }
@@ -113,7 +114,7 @@ UserInput parseUserInput(char *commandName) {
   char *token = strtok(commandName, "_");
   userInput.command = (enum Command)token[0];
   token = strtok(NULL, "_");
-  userInput.argument = token ? strtol(token, NULL, 10) : -1;
+  userInput.argument = token ? strtol(token, NULL, 10) : NO_ARGUMENT;
   return userInput;
 }
 
@@ -126,7 +127,7 @@ void processListOfProcessesCommand() {
 }
 
 void processDisableShowStatsCommand(UserInput userInput) {
-  if (userInput.argument != -1) {
+  if (userInput.argument != NO_ARGUMENT) {
     printf("\nCommand 's_k' was entered\n");
     sendSignalToBlockStatisticsOutput(
         createdChildProcessesPids[userInput.argument]);
@@ -137,7 +138,7 @@ void processDisableShowStatsCommand(UserInput userInput) {
 }
 
 void processEnableShowStatsCommand(UserInput userInput) {
-  if (userInput.argument != -1) {
+  if (userInput.argument != NO_ARGUMENT) {
     printf("\nCommand 'g_k' was entered\n");
     sendSignalToAllowStatisticsOutput(
         createdChildProcessesPids[userInput.argument]);
@@ -148,10 +149,16 @@ void processEnableShowStatsCommand(UserInput userInput) {
 }
 
 void processDisableShowStatsAndAllowForOneCommand(UserInput userInput) {
-  if (userInput.argument != -1) {
+  if (userInput.argument != NO_ARGUMENT) {
     printf("\nCommand 'p_k' was entered\n");
+    if (userInput.argument >= (long)countCreatedChildProcesses ||
+        userInput.argument < 0) {
+      printf("No child process with number %ld\n", userInput.argument);
+      return;
+    }
     blockStatisticsOutputForAllProcess();
     nanosleep(&(struct timespec){.tv_sec = 0, .tv_nsec = 1000000}, NULL);
+
     sendSignalToAllowStatisticsOutput(
         createdChildProcessesPids[userInput.argument]);
     alarm(5);

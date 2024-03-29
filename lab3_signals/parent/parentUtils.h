@@ -17,6 +17,7 @@
 #define MAX_COMMAND_LENGTH 10
 #define CHILD_NAME 6
 #define MAX_COUNT_OF_CHILD_PROCESSES 15
+#define NO_ARGUMENT -1
 enum Command {
   CMD_CREATE_PROCESS = '+',
   CMD_DELETE_LAST_PROCESS = '-',
@@ -27,8 +28,6 @@ enum Command {
   CMD_DISABLE_SHOW_STATS_AND_ALLOW_FOR_ONE = 'p',
   CMD_EXIT = 'q'
 };
-
-extern char *args[];
 
 typedef struct {
   enum Command command;
