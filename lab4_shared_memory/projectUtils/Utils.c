@@ -5,6 +5,16 @@ sem_t emptySlotsSemaphore;
 sem_t usedSlotsSemaphore;
 sem_t queueMutex;
 
+void printQueueStatusInfo(CircularQueue *queue) {
+  printf(YELLOW_COLOR);
+  printf("Queue status:\n");
+  printf("Queue current size: %d\n", queue->currentSize);
+  printf("Queue max capacity: %d\n", queue->maxCapacity);
+  printf("Queue count removed messages: %d\n", queue->countRemovedMessages);
+  printf("Queue count added messages: %d\n", queue->countAddedMessages);
+  printf(STANDART_COLOR);
+}
+
 void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
   char symbol;
   printMenu();
@@ -23,6 +33,8 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
       break;
     case 'c':
       deleteConsumer();
+    case 'i':
+      printQueueStatusInfo(queue);
       break;
     case 'q':
       deleteAllProducers();
@@ -65,6 +77,7 @@ void printMenu() {
          "[p] - delete producer\n"
          "[C] - create consumer\n"
          "[c] - delete consumer\n"
+         "[i] - queue info\n"
          "[q] - quit\n"
          "-->   ");
 }

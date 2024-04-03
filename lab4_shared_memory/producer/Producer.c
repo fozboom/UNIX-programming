@@ -49,22 +49,24 @@ void createProducer() {
   }
 
   while (keepRunningProducer) {
-    Message *message;
-    printf("shmid - %d\n", shmid);
-    message = createMessage();
+    printf(RED_COLOR);
     sem_wait(emptySlotsSemaphore);
     sem_wait(queueMutex);
 
-    printf("Producer\n");
+    Message *message;
+    message = createMessage();
+
     addMessageToQueue(queue, message);
     printMessage(message);
-    printf("%d\n", queue->currentSize);
 
     sem_post(queueMutex);
     sem_post(usedSlotsSemaphore);
+    printf(STANDART_COLOR);
+    printf("Count added messages: %u\n", queue->countAddedMessages);
 
     sleep(4);
   }
+  printf(STANDART_COLOR);
 
   munmap(queue, SHM_SIZE);
   close(shmid);

@@ -4,8 +4,9 @@
 Message *createMessage() {
   size_t size;
   do {
-    size = rand() % 257;
+    size = rand() % 255;
   } while (size == 0);
+  size = ((size + 3) / 4) * 4;
 
   Message *message = (Message *)malloc(sizeof(Message));
 
@@ -19,9 +20,9 @@ Message *createMessage() {
     } else {
       message->data[i] = 'a' + rand() % 26;
     }
+    message->hash += message->data[i];
   }
 
-  message->hash = 1;
   message->type = 0;
   return message;
 }

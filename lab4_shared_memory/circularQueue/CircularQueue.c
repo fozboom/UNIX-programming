@@ -55,10 +55,8 @@ Message *removeMessageFromQueue(CircularQueue *queue) {
     return NULL;
   }
 
-  // Чтение сообщения из общей памяти
   Message *message = (Message *)queue->headPosition;
 
-  // Создание копии сообщения для возврата
   Message *messageCopy = (Message *)malloc(sizeof(Message));
   messageCopy->type = message->type;
   messageCopy->hash = message->hash;
@@ -67,10 +65,10 @@ Message *removeMessageFromQueue(CircularQueue *queue) {
   memcpy(messageCopy->data, queue->headPosition + sizeof(Message),
          message->size);
 
-  // Обновление headPosition
   queue->headPosition += sizeof(Message) + message->size;
 
   queue->currentSize--;
+  queue->countRemovedMessages++;
 
   return messageCopy;
 }

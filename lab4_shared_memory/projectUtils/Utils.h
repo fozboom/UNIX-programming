@@ -17,6 +17,11 @@
 #define SEM_EMPTY_SLOTS "/sem-empty-slots"
 #define SEM_USED_SLOTS "/sem-used-slots"
 #define MUTEX "/mutex"
+#define GREEN_COLOR "\033[0;32m"
+#define RED_COLOR "\033[0;31m"
+#define YELLOW_COLOR "\033[0;33m"
+#define STANDART_COLOR "\033[0m"
+
 extern volatile sig_atomic_t keepRunningProducer;
 extern volatile sig_atomic_t keepRunningConsumer;
 

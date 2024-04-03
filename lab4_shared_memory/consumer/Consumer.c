@@ -47,22 +47,20 @@ void createConsumer() {
   }
 
   while (keepRunningConsumer) {
-    printf("shmid consumer - %d\n", shmid);
+    printf(GREEN_COLOR);
     sem_wait(usedSlotsSemaphore);
     sem_wait(queueMutex);
 
     Message *message = removeMessageFromQueue(queue);
-
-    printf("Consumer currentSize - %d\n", queue->currentSize);
-    printf("Consumer\n");
     printMessage(message);
 
     sem_post(queueMutex);
     sem_post(emptySlotsSemaphore);
-
-    sleep(3);
+    printf(STANDART_COLOR);
+    printf("Count removed messages: %d\n", queue->countRemovedMessages);
+    sleep(2);
   }
-
+  printf(STANDART_COLOR);
   munmap(queue, SHM_SIZE);
   close(shmid);
   exit(EXIT_SUCCESS);
