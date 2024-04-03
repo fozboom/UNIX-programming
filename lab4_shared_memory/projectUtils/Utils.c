@@ -1,10 +1,6 @@
 #include "Utils.h"
 #include <fcntl.h>
 
-sem_t emptySlotsSemaphore;
-sem_t usedSlotsSemaphore;
-sem_t queueMutex;
-
 void printQueueStatusInfo(CircularQueue *queue) {
   printf(YELLOW_COLOR);
   printf("Queue status:\n");
@@ -45,12 +41,6 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
       return;
     }
   }
-}
-
-void initializeSemaphorsAndMutexes() {
-  sem_init(&emptySlotsSemaphore, 0, QUEUE_SIZE);
-  sem_init(&usedSlotsSemaphore, 0, 0);
-  sem_init(&queueMutex, 0, 1);
 }
 
 void handleSIGUSR2(int signal, siginfo_t *info, void *ptr) {

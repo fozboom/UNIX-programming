@@ -25,7 +25,6 @@
 extern volatile sig_atomic_t keepRunningProducer;
 extern volatile sig_atomic_t keepRunningConsumer;
 
-void initializeSemaphorsAndMutexes();
 void initializeHandler();
 void printMenu();
 void initialize(int sharedMemoryId, CircularQueue *queue);

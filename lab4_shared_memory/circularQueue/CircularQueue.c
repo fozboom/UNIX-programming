@@ -37,11 +37,9 @@ void addMessageToQueue(CircularQueue *queue, Message *message) {
     return;
   }
 
-  // Копирование структуры Message в общую память
   memcpy(queue->tailPosition, message, sizeof(Message));
   queue->tailPosition += sizeof(Message);
 
-  // Копирование данных сообщения в общую память
   memcpy(queue->tailPosition, message->data, message->size);
   queue->tailPosition += message->size;
 
