@@ -13,10 +13,6 @@
 #define _XOPEN_SOURCE 700
 #define MAX_COUNT_OF_PRODUCERS 15
 
-extern sem_t emptySlotsSemaphore;
-extern sem_t usedSlotsSemaphore;
-extern sem_t queueMutex;
-
 extern volatile sig_atomic_t keepRunningProducer;
 extern pid_t producersPid[];
 extern size_t producersCount;

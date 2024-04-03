@@ -1,8 +1,39 @@
 #include "Utils.h"
+#include <fcntl.h>
 
 sem_t emptySlotsSemaphore;
 sem_t usedSlotsSemaphore;
 sem_t queueMutex;
+
+void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
+  char symbol;
+  printMenu();
+  while (1) {
+    symbol = getchar();
+    getchar();
+    switch (symbol) {
+    case 'P':
+      createProducer(sharedMemoryDescriptor);
+      break;
+    case 'p':
+      deleteProducer();
+      break;
+    case 'C':
+      createConsumer(sharedMemoryDescriptor);
+      break;
+    case 'c':
+      deleteConsumer();
+      break;
+    case 'q':
+      deleteAllProducers();
+      deleteAllConsumers();
+      munmap(queue, SHM_SIZE);
+      close(sharedMemoryDescriptor);
+      shm_unlink(SHARED_MEMORY_NAME);
+      return;
+    }
+  }
+}
 
 void initializeSemaphorsAndMutexes() {
   sem_init(&emptySlotsSemaphore, 0, QUEUE_SIZE);
@@ -36,4 +67,55 @@ void printMenu() {
          "[c] - delete consumer\n"
          "[q] - quit\n"
          "-->   ");
+}
+
+void initializeSharedMemory(int *sharedMemoryId, CircularQueue **queue) {
+  *sharedMemoryId = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
+  if (*sharedMemoryId == -1) {
+    perror("shm_open");
+    exit(EXIT_FAILURE);
+  }
+
+  ftruncate(*sharedMemoryId, SHM_SIZE);
+
+  *queue = mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                *sharedMemoryId, 0);
+  if (*queue == MAP_FAILED) {
+    perror("mmap");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void initializeSemaphores(sem_t **emptySlotsSemaphore,
+                          sem_t **usedSlotsSemaphore, sem_t **queueMutex) {
+  *emptySlotsSemaphore =
+      sem_open(SEM_EMPTY_SLOTS, O_CREAT | O_EXCL, 0666, QUEUE_SIZE);
+  if (*emptySlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, O_CREAT | O_EXCL, 0666, 0);
+  if (*usedSlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  *queueMutex = sem_open(MUTEX, O_CREAT | O_EXCL, 0666, 1);
+  if (*queueMutex == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void cleanResources() {
+  shm_unlink(SHARED_MEMORY_NAME);
+  sem_unlink(SEM_EMPTY_SLOTS);
+  sem_unlink(SEM_USED_SLOTS);
+  sem_unlink(MUTEX);
+}
+
+void closeSemaphores(sem_t *emptySlotsSemaphore, sem_t *usedSlotsSemaphore,
+                     sem_t *queueMutex) {
+  sem_close(emptySlotsSemaphore);
+  sem_close(usedSlotsSemaphore);
+  sem_close(queueMutex);
 }

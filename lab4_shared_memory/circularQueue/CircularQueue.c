@@ -16,8 +16,8 @@ void initializeQueue(CircularQueue *queue) {
     exit(EXIT_FAILURE);
   }
 
-  queue->headPosition = mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
-                             memoryDescriptor, 0) +
+  queue->headPosition = (char *)mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE,
+                                     MAP_SHARED, memoryDescriptor, 0) +
                         sizeof(CircularQueue);
   if (queue->headPosition == MAP_FAILED) {
     perror("mmap");

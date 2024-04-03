@@ -32,20 +32,36 @@ void createProducer() {
     exit(EXIT_FAILURE);
   }
 
+  sem_t *emptySlotsSemaphore = sem_open(SEM_EMPTY_SLOTS, QUEUE_SIZE);
+  if (emptySlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  sem_t *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, 0);
+  if (usedSlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  sem_t *queueMutex = sem_open(MUTEX, 1);
+  if (queueMutex == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+
   while (keepRunningProducer) {
     Message *message;
     printf("shmid - %d\n", shmid);
     message = createMessage();
-    sem_wait(&emptySlotsSemaphore);
-    sem_wait(&queueMutex);
+    sem_wait(emptySlotsSemaphore);
+    sem_wait(queueMutex);
 
     printf("Producer\n");
     addMessageToQueue(queue, message);
     printMessage(message);
     printf("%d\n", queue->currentSize);
 
-    sem_post(&queueMutex);
-    sem_post(&usedSlotsSemaphore);
+    sem_post(queueMutex);
+    sem_post(usedSlotsSemaphore);
 
     sleep(4);
   }

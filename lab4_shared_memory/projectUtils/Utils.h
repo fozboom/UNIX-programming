@@ -12,16 +12,22 @@
 
 #define QUEUE_SIZE 10
 #define _XOPEN_SOURCE 700
-#define SHM_KEY 1234
 #define SHM_SIZE (sizeof(CircularQueue) + QUEUE_SIZE * (sizeof(Message) + 256))
 #define SHARED_MEMORY_NAME "shared_memory"
-
-extern sem_t emptySlotsSemaphore;
-extern sem_t usedSlotsSemaphore;
-extern sem_t queueMutex;
+#define SEM_EMPTY_SLOTS "/sem-empty-slots"
+#define SEM_USED_SLOTS "/sem-used-slots"
+#define MUTEX "/mutex"
 extern volatile sig_atomic_t keepRunningProducer;
 extern volatile sig_atomic_t keepRunningConsumer;
 
 void initializeSemaphorsAndMutexes();
 void initializeHandler();
 void printMenu();
+void initialize(int sharedMemoryId, CircularQueue *queue);
+void handleInput(int sharedMemoryDescriptor, CircularQueue *queue);
+void initializeSemaphores(sem_t **emptySlotsSemaphore,
+                          sem_t **usedSlotsSemaphore, sem_t **queueMutex);
+void initializeSharedMemory(int *sharedMemoryId, CircularQueue **queue);
+void cleanResources();
+void closeSemaphores(sem_t *emptySlotsSemaphore, sem_t *usedSlotsSemaphore,
+                     sem_t *queueMutex);

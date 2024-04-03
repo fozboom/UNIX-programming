@@ -14,9 +14,6 @@
 extern pid_t consumersPid[];
 extern size_t consumersCount;
 extern volatile sig_atomic_t keepRunningConsumer;
-extern sem_t emptySlotsSemaphore;
-extern sem_t usedSlotsSemaphore;
-extern sem_t queueMutex;
 
 void createConsumer();
 void deleteConsumer();

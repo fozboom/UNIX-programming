@@ -30,11 +30,26 @@ void createConsumer() {
     perror("mmap");
     exit(EXIT_FAILURE);
   }
+  sem_t *emptySlotsSemaphore = sem_open(SEM_EMPTY_SLOTS, QUEUE_SIZE);
+  if (emptySlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  sem_t *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, 0);
+  if (usedSlotsSemaphore == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  sem_t *queueMutex = sem_open(MUTEX, 1);
+  if (queueMutex == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
 
   while (keepRunningConsumer) {
     printf("shmid consumer - %d\n", shmid);
-    sem_wait(&emptySlotsSemaphore);
-    sem_wait(&queueMutex);
+    sem_wait(usedSlotsSemaphore);
+    sem_wait(queueMutex);
 
     Message *message = removeMessageFromQueue(queue);
 
@@ -42,8 +57,8 @@ void createConsumer() {
     printf("Consumer\n");
     printMessage(message);
 
-    sem_post(&queueMutex);
-    sem_post(&usedSlotsSemaphore);
+    sem_post(queueMutex);
+    sem_post(emptySlotsSemaphore);
 
     sleep(3);
   }
