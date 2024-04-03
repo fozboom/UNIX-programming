@@ -15,7 +15,7 @@ int main() {
     perror("mmap");
     exit(EXIT_FAILURE);
   }
-  initializeQueue(queue, QUEUE_SIZE);
+  initializeQueue(queue);
   initializeSemaphorsAndMutexes();
   initializeHandler();
   char symbol;

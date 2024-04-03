@@ -1,33 +1,46 @@
 #include "Message.h"
 #include "../projectUtils/Utils.h"
 
-Message createMessage() {
-  Message message;
+Message *createMessage() {
+  size_t size;
   do {
-    message.size = rand() % 257;
-  } while (message.size == 0);
+    size = rand() % 257;
+  } while (size == 0);
 
-  for (size_t i = 0; i < message.size; i++) {
+  Message *message = (Message *)malloc(sizeof(Message));
+
+  message->size = size;
+  message->data = (char *)malloc(size * sizeof(char));
+
+  for (size_t i = 0; i < message->size; i++) {
     int is_upper_case = rand() % 2;
     if (is_upper_case) {
-      message.data[i] = 'A' + rand() % 26;
+      message->data[i] = 'A' + rand() % 26;
     } else {
-      message.data[i] = 'a' + rand() % 26;
+      message->data[i] = 'a' + rand() % 26;
     }
   }
-  message.data[message.size] = '\0';
+
+  message->hash = 0;
+  message->type = 0;
   return message;
 }
 
-void printMessage(Message message) {
-  if (message.size == 0) {
-    printf("Message is empty\n");
+void deleteMessage(Message *message) {
+  if (message == NULL) {
     return;
   }
-  printf("Message size: %d\n", message.size);
-  printf("Message data: ");
-  for (size_t i = 0; i < message.size; i++) {
-    printf("%c", message.data[i]);
+  free(message->data);
+  free(message);
+}
+
+void printMessage(Message *message) {
+  printf("Message Type: %u\n", message->type);
+  printf("Message Hash: %u\n", message->hash);
+  printf("Message Size: %u\n", message->size);
+  printf("Message Data: ");
+  for (size_t i = 0; i < message->size; i++) {
+    printf("%c", message->data[i]);
   }
   printf("\n");
 }

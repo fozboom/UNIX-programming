@@ -13,9 +13,7 @@
 #define QUEUE_SIZE 10
 #define _XOPEN_SOURCE 700
 #define SHM_KEY 1234
-#define SHM_SIZE                                                               \
-  (sizeof(CircularQueue) + QUEUE_SIZE * sizeof(Message *) +                    \
-   QUEUE_SIZE * sizeof(Message))
+#define SHM_SIZE (sizeof(CircularQueue) + QUEUE_SIZE * (sizeof(Message) + 256))
 #define SHARED_MEMORY_NAME "shared_memory"
 
 extern sem_t emptySlotsSemaphore;

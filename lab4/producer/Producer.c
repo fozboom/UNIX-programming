@@ -33,7 +33,7 @@ void createProducer() {
   }
 
   while (keepRunningProducer) {
-    Message message;
+    Message *message;
     printf("shmid - %d\n", shmid);
     message = createMessage();
     sem_wait(&emptySlotsSemaphore);

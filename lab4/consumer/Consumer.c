@@ -36,15 +36,16 @@ void createConsumer() {
     sem_wait(&emptySlotsSemaphore);
     sem_wait(&queueMutex);
 
-    removeMessageFromQueue(queue);
+    Message *message = removeMessageFromQueue(queue);
 
     printf("Consumer currentSize - %d\n", queue->currentSize);
     printf("Consumer\n");
+    printMessage(message);
 
     sem_post(&queueMutex);
     sem_post(&usedSlotsSemaphore);
 
-    sleep(7);
+    sleep(3);
   }
 
   munmap(queue, SHM_SIZE);
