@@ -21,7 +21,7 @@ Message *createMessage() {
     }
   }
 
-  message->hash = 0;
+  message->hash = 1;
   message->type = 0;
   return message;
 }
