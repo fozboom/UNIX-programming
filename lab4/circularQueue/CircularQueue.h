@@ -1,3 +1,6 @@
+#ifndef CIRCULAR_QUEUE_H
+#define CIRCULAR_QUEUE_H
+
 #include "../message/Message.h"
 
 typedef struct {
@@ -15,3 +18,6 @@ Message *removeMessageFromQueue(CircularQueue *queue);
 int isQueueEmpty(CircularQueue *queue);
 int isQueueFull(CircularQueue *queue);
 void initializeQueue(CircularQueue *queue, int maxCapacity);
+void printLastMessage(CircularQueue *queue);
+
+#endif
