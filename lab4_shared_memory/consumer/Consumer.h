@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define MAX_COUNT_OF_CONSUMERS 15
+#define MAX_COUNT_OF_CONSUMERS 5
 
 extern pid_t consumersPid[];
 extern size_t consumersCount;

@@ -29,6 +29,7 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
       break;
     case 'c':
       deleteConsumer();
+      break;
     case 'i':
       printQueueStatusInfo(queue);
       break;

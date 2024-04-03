@@ -8,6 +8,10 @@ pid_t producersPid[MAX_COUNT_OF_PRODUCERS];
 size_t producersCount = 0;
 
 void createProducer() {
+  if (producersCount == MAX_COUNT_OF_PRODUCERS) {
+    printf("Max count of producers is reached\n");
+    return;
+  }
   pid_t pid = fork();
 
   if (pid == -1) {
@@ -76,7 +80,8 @@ void deleteProducer() {
   if (producersCount == 0) {
     return;
   }
-
+  printf("Producer with pid %d was deleted\n",
+         producersPid[producersCount - 1]);
   kill(producersPid[--producersCount], SIGUSR2);
 }
 

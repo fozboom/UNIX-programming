@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #define _XOPEN_SOURCE 700
-#define MAX_COUNT_OF_PRODUCERS 15
+#define MAX_COUNT_OF_PRODUCERS 5
 
 extern volatile sig_atomic_t keepRunningProducer;
 extern pid_t producersPid[];

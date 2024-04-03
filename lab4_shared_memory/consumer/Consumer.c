@@ -8,6 +8,10 @@ size_t consumersCount = 0;
 volatile sig_atomic_t keepRunningConsumer = 1;
 
 void createConsumer() {
+  if (consumersCount == MAX_COUNT_OF_CONSUMERS) {
+    printf("Max count of consumers is reached\n");
+    return;
+  }
   pid_t pid = fork();
 
   if (pid == -1) {
@@ -70,7 +74,8 @@ void deleteConsumer() {
   if (consumersCount == 0) {
     return;
   }
-
+  printf("Consumer with pid %d was deleted\n",
+         consumersPid[consumersCount - 1]);
   kill(consumersPid[--consumersCount], SIGUSR1);
 }
 
