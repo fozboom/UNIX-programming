@@ -12,7 +12,7 @@ typedef struct {
   char data[DATA_SIZE];
 } Message;
 
-Message *createMessage();
-void printMessage(Message *message);
+Message createMessage();
+void printMessage(Message message);
 
 #endif

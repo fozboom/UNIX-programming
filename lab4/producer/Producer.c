@@ -33,9 +33,8 @@ void createProducer() {
   }
 
   while (keepRunningProducer) {
+    Message message;
     printf("shmid - %d\n", shmid);
-    Message *message = mmap(NULL, sizeof(Message), PROT_READ | PROT_WRITE,
-                            MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     message = createMessage();
     sem_wait(&emptySlotsSemaphore);
     sem_wait(&queueMutex);
@@ -49,13 +48,10 @@ void createProducer() {
     sem_post(&usedSlotsSemaphore);
 
     sleep(4);
-    munmap(message, sizeof(Message));
   }
 
   munmap(queue, SHM_SIZE);
-
   close(shmid);
-
   exit(EXIT_SUCCESS);
 }
 void deleteProducer() {

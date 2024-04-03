@@ -2,9 +2,10 @@
 #define CIRCULAR_QUEUE_H
 
 #include "../message/Message.h"
+#include "../projectUtils/Utils.h"
 
 typedef struct {
-  Message **messages;
+  Message *messages;
   int headIndex;
   int tailIndex;
   int currentSize;
@@ -13,8 +14,8 @@ typedef struct {
   int countRemovedMessages;
 } CircularQueue;
 
-void addMessageToQueue(CircularQueue *queue, Message *message);
-Message *removeMessageFromQueue(CircularQueue *queue);
+void addMessageToQueue(CircularQueue *queue, Message message);
+void removeMessageFromQueue(CircularQueue *queue);
 int isQueueEmpty(CircularQueue *queue);
 int isQueueFull(CircularQueue *queue);
 void initializeQueue(CircularQueue *queue, int maxCapacity);

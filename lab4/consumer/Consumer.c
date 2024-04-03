@@ -33,13 +33,12 @@ void createConsumer() {
 
   while (keepRunningConsumer) {
     printf("shmid consumer - %d\n", shmid);
-    Message *message;
     sem_wait(&emptySlotsSemaphore);
     sem_wait(&queueMutex);
 
-    printMessage(queue->messages[0]);
+    removeMessageFromQueue(queue);
 
-    printf("Count in consumer - %d\n", queue->currentSize);
+    printf("Consumer currentSize - %d\n", queue->currentSize);
     printf("Consumer\n");
 
     sem_post(&queueMutex);
