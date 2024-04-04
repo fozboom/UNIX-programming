@@ -51,11 +51,19 @@ void createProducer() {
     perror("sem_open");
     exit(EXIT_FAILURE);
   }
-
+  int res;
   while (keepRunningProducer) {
     printf(RED_COLOR);
-    sem_wait(emptySlotsSemaphore);
-    sem_wait(queueMutex);
+    res = sem_wait(emptySlotsSemaphore);
+    if (res != 0) {
+      perror("sem_wait");
+      exit(EXIT_FAILURE);
+    }
+    res = sem_wait(queueMutex);
+    if (res != 0) {
+      perror("sem_wait");
+      exit(EXIT_FAILURE);
+    }
 
     Message *message;
     message = createMessage();
@@ -67,7 +75,8 @@ void createProducer() {
     sem_post(usedSlotsSemaphore);
     printf(STANDART_COLOR);
     printf("Count added messages: %u\n", queue->countAddedMessages);
-
+    free(message->data);
+    free(message);
     sleep(4);
   }
   printf(STANDART_COLOR);

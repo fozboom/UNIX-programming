@@ -49,11 +49,19 @@ void createConsumer() {
     perror("sem_open");
     exit(EXIT_FAILURE);
   }
-
+  int res;
   while (keepRunningConsumer) {
     printf(GREEN_COLOR);
-    sem_wait(usedSlotsSemaphore);
-    sem_wait(queueMutex);
+    res = sem_wait(usedSlotsSemaphore);
+    if (res == -1) {
+      perror("sem_wait");
+      exit(EXIT_FAILURE);
+    }
+    res = sem_wait(queueMutex);
+    if (res == -1) {
+      perror("sem_wait");
+      exit(EXIT_FAILURE);
+    }
 
     Message *message = removeMessageFromQueue(queue);
     printMessage(message);
@@ -62,6 +70,8 @@ void createConsumer() {
     sem_post(emptySlotsSemaphore);
     printf(STANDART_COLOR);
     printf("Count removed messages: %d\n", queue->countRemovedMessages);
+    free(message->data);
+    free(message);
     sleep(2);
   }
   printf(STANDART_COLOR);
