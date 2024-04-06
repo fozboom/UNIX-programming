@@ -1,5 +1,6 @@
 #include "Consumer.h"
 #include "../projectUtils/Utils.h"
+#include <stdio.h>
 #include <sys/mman.h>
 
 pid_t consumersPid[MAX_COUNT_OF_CONSUMERS];
@@ -52,16 +53,8 @@ void createConsumer() {
   int res;
   while (keepRunningConsumer) {
     printf(GREEN_COLOR);
-    res = sem_wait(usedSlotsSemaphore);
-    if (res == -1) {
-      perror("sem_wait");
-      exit(EXIT_FAILURE);
-    }
-    res = sem_wait(queueMutex);
-    if (res == -1) {
-      perror("sem_wait");
-      exit(EXIT_FAILURE);
-    }
+    sem_wait(usedSlotsSemaphore);
+    sem_wait(queueMutex);
 
     Message *message = removeMessageFromQueue(queue);
     printMessage(message);
@@ -70,6 +63,7 @@ void createConsumer() {
     sem_post(emptySlotsSemaphore);
     printf(STANDART_COLOR);
     printf("Count removed messages: %d\n", queue->countRemovedMessages);
+    fflush(stdout);
     free(message->data);
     free(message);
     sleep(2);

@@ -1,7 +1,4 @@
 #include "CircularQueue.h"
-#include "../projectUtils/Utils.h"
-#include <stdlib.h>
-#include <sys/mman.h>
 
 int isQueueFull(CircularQueue *queue) {
   return queue->currentSize == queue->maxCapacity;
@@ -10,9 +7,12 @@ int isQueueFull(CircularQueue *queue) {
 int isQueueEmpty(CircularQueue *queue) { return queue->currentSize == 0; }
 
 void initializeQueue(CircularQueue *queue) {
+  queue->messages = (Message **)calloc(QUEUE_SIZE, sizeof(Message *));
+  for (int i = 0; i < QUEUE_SIZE; i++) {
+    queue->messages[i] = NULL;
+  }
 
-  queue->tailPosition = queue->headPosition;
-
+  queue->tailPosition = queue->headPosition = 0;
   queue->maxCapacity = QUEUE_SIZE;
   queue->currentSize = 0;
   queue->countAddedMessages = 0;
@@ -24,37 +24,30 @@ void addMessageToQueue(CircularQueue *queue, Message *message) {
     printf("Queue is full\n");
     return;
   }
-
-  memcpy(queue->tailPosition, message, sizeof(Message));
-  queue->tailPosition += sizeof(Message);
-
-  memcpy(queue->tailPosition, message->data, message->size);
-  queue->tailPosition += message->size;
-
+  queue->messages[queue->tailPosition] = message;
+  queue->tailPosition = (queue->tailPosition + 1) % queue->maxCapacity;
   queue->currentSize++;
   queue->countAddedMessages++;
 }
 
-Message *removeMessageFromQueue(CircularQueue *queue) {
+void removeMessageFromQueue(CircularQueue *queue) {
   if (isQueueEmpty(queue)) {
     printf("Queue is empty\n");
-    return NULL;
+    return;
   }
-
-  Message *message = (Message *)queue->headPosition;
-
-  Message *messageCopy = (Message *)malloc(sizeof(Message));
-  messageCopy->type = message->type;
-  messageCopy->hash = message->hash;
-  messageCopy->size = message->size;
-  messageCopy->data = (char *)malloc(message->size);
-  memcpy(messageCopy->data, queue->headPosition + sizeof(Message),
-         message->size);
-
-  queue->headPosition += sizeof(Message) + message->size;
-
+  printMessage(queue->messages[queue->headPosition]);
+  free(queue->messages[queue->headPosition]);
+  queue->messages[queue->headPosition] = NULL;
+  queue->headPosition = (queue->headPosition + 1) % queue->maxCapacity;
   queue->currentSize--;
   queue->countRemovedMessages++;
+}
 
-  return messageCopy;
+void freeQueue(CircularQueue *queue) {
+  for (int i = 0; i < queue->maxCapacity; i++) {
+    if (queue->messages[i] != NULL) {
+      free(queue->messages[i]);
+    }
+  }
+  free(queue->messages);
 }

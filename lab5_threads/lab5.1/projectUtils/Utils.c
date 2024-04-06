@@ -1,5 +1,4 @@
 #include "Utils.h"
-#include <fcntl.h>
 
 void printQueueStatusInfo(CircularQueue *queue) {
   printf(YELLOW_COLOR);
@@ -11,7 +10,7 @@ void printQueueStatusInfo(CircularQueue *queue) {
   printf(STANDART_COLOR);
 }
 
-void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
+void handleInput(ProducerConsumerManager *manager) {
   char symbol;
   printMenu();
   while (1) {
@@ -19,47 +18,29 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
     getchar();
     switch (symbol) {
     case 'P':
-      createProducer(sharedMemoryDescriptor);
+      createProducer(manager);
       break;
     case 'p':
-      deleteProducer();
+      deleteProducer(manager, manager->countProducers - 1);
       break;
     case 'C':
-      createConsumer(sharedMemoryDescriptor);
+      createConsumer(manager);
       break;
     case 'c':
-      deleteConsumer();
+      deleteConsumer(manager, manager->countConsumers - 1);
       break;
     case 'i':
-      printQueueStatusInfo(queue);
+      printQueueStatusInfo(manager->queue);
       break;
     case 'q':
-      deleteAllProducers();
-      deleteAllConsumers();
-      munmap(queue, SHM_SIZE);
-      close(sharedMemoryDescriptor);
-      shm_unlink(SHARED_MEMORY_NAME);
+      printf(STANDART_COLOR);
+      deleteAllProducers(manager);
+      deleteAllConsumers(manager);
+      destroySemaphoresAndMutex(manager);
+      freeProducerConsumerManager(manager);
       return;
     }
   }
-}
-
-void handleSIGUSR2(int signal, siginfo_t *info, void *ptr) {
-  keepRunningProducer = 0;
-}
-
-void handleSIGUSR1(int signal, siginfo_t *info, void *ptr) {
-  keepRunningConsumer = 0;
-}
-
-void initializeHandler() {
-  struct sigaction act;
-  act.sa_sigaction = &handleSIGUSR1;
-  act.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDWAIT;
-  sigaction(SIGINT, &act, NULL);
-
-  act.sa_sigaction = &handleSIGUSR2;
-  sigaction(SIGUSR2, &act, NULL);
 }
 
 void printMenu() {
@@ -73,53 +54,51 @@ void printMenu() {
          "-->   ");
 }
 
-void initializeSharedMemory(int *sharedMemoryId, CircularQueue **queue) {
-  *sharedMemoryId = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
-  if (*sharedMemoryId == -1) {
-    perror("shm_open");
-    exit(EXIT_FAILURE);
+void initializeSemaphoresAndMutex(ProducerConsumerManager *manager) {
+  sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
+  sem_init(&manager->usedSlotsSemaphore, 0, 0);
+  pthread_mutex_init(&manager->queueMutex, NULL);
+}
+
+void destroySemaphoresAndMutex(ProducerConsumerManager *manager) {
+  sem_destroy(&manager->emptySlotsSemaphore);
+  sem_destroy(&manager->usedSlotsSemaphore);
+  pthread_mutex_destroy(&manager->queueMutex);
+  printf("Semaphores and mutex are destroyed\n");
+}
+
+void initializeProducerConsumerManager(ProducerConsumerManager *manager,
+                                       int maxProducers, int maxConsumers) {
+  manager->queue = malloc(sizeof(CircularQueue));
+  initializeQueue(manager->queue);
+
+  sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
+  sem_init(&manager->usedSlotsSemaphore, 0, 0);
+  pthread_mutex_init(&manager->queueMutex, NULL);
+
+  manager->producers = malloc(maxProducers * sizeof(pthread_t));
+  manager->consumers = malloc(maxConsumers * sizeof(pthread_t));
+
+  manager->keepRunningProducer = malloc(maxProducers * sizeof(sig_atomic_t));
+  manager->keepRunningConsumer = malloc(maxConsumers * sizeof(sig_atomic_t));
+
+  manager->countProducers = 0;
+  manager->countConsumers = 0;
+
+  for (int i = 0; i < maxProducers; i++) {
+    manager->keepRunningProducer[i] = 1;
   }
-
-  ftruncate(*sharedMemoryId, SHM_SIZE);
-
-  *queue = mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
-                *sharedMemoryId, 0);
-  if (*queue == MAP_FAILED) {
-    perror("mmap");
-    exit(EXIT_FAILURE);
+  for (int i = 0; i < maxConsumers; i++) {
+    manager->keepRunningConsumer[i] = 1;
   }
 }
 
-void initializeSemaphores(sem_t **emptySlotsSemaphore,
-                          sem_t **usedSlotsSemaphore, sem_t **queueMutex) {
-  *emptySlotsSemaphore =
-      sem_open(SEM_EMPTY_SLOTS, O_CREAT | O_EXCL, 0666, QUEUE_SIZE);
-  if (*emptySlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, O_CREAT | O_EXCL, 0666, 0);
-  if (*usedSlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  *queueMutex = sem_open(MUTEX, O_CREAT | O_EXCL, 0666, 1);
-  if (*queueMutex == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-}
-
-void cleanResources() {
-  shm_unlink(SHARED_MEMORY_NAME);
-  sem_unlink(SEM_EMPTY_SLOTS);
-  sem_unlink(SEM_USED_SLOTS);
-  sem_unlink(MUTEX);
-}
-
-void closeSemaphores(sem_t *emptySlotsSemaphore, sem_t *usedSlotsSemaphore,
-                     sem_t *queueMutex) {
-  sem_close(emptySlotsSemaphore);
-  sem_close(usedSlotsSemaphore);
-  sem_close(queueMutex);
+void freeProducerConsumerManager(ProducerConsumerManager *manager) {
+  free(manager->producers);
+  free(manager->consumers);
+  free(manager->keepRunningProducer);
+  free(manager->keepRunningConsumer);
+  free(manager->queue);
+  free(manager);
+  printf("ProducerConsumerManager is freed\n");
 }

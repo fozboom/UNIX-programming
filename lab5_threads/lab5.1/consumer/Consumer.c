@@ -1,86 +1,58 @@
 #include "Consumer.h"
-#include "../projectUtils/Utils.h"
-#include <sys/mman.h>
 
-pid_t consumersPid[MAX_COUNT_OF_CONSUMERS];
-size_t consumersCount = 0;
+void *consumerFunction(void *arg) {
+  ConsumerArgs *args = (ConsumerArgs *)arg;
+  ProducerConsumerManager *manager = args->manager;
+  int index = args->index;
 
-volatile sig_atomic_t keepRunningConsumer = 1;
+  while (manager->keepRunningConsumer[index]) {
+    printf(RED_COLOR);
+    sem_wait(&manager->usedSlotsSemaphore);
+    pthread_mutex_lock(&manager->queueMutex);
 
-void createConsumer() {
-  if (consumersCount == MAX_COUNT_OF_CONSUMERS) {
+    removeMessageFromQueue(manager->queue);
+
+    pthread_mutex_unlock(&manager->queueMutex);
+    sem_post(&manager->emptySlotsSemaphore);
+    printf("Count removed messages: %d\n",
+           manager->queue->countRemovedMessages);
+    sleep(3);
+  }
+  printf(STANDART_COLOR);
+  free(args);
+  return NULL;
+}
+
+void createConsumer(ProducerConsumerManager *manager) {
+  if (manager->countConsumers == MAX_COUNT_OF_CONSUMERS) {
     printf("Max count of consumers is reached\n");
     return;
   }
-  pid_t pid = fork();
+  pthread_t consumerThread;
+  manager->keepRunningConsumer[manager->countConsumers] = 1;
 
-  if (pid == -1) {
-    perror("consumer fork");
-    exit(EXIT_FAILURE);
-  } else if (pid == 0) {
-    srand(getpid());
-  } else {
-    consumersPid[consumersCount++] = pid;
-    return;
-  }
-  int shmid = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
-  if (shmid == -1) {
-    perror("shm_open");
-    exit(EXIT_FAILURE);
-  }
-  CircularQueue *queue =
-      mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmid, 0);
-  if (queue == MAP_FAILED) {
-    perror("mmap");
-    exit(EXIT_FAILURE);
-  }
-  sem_t *emptySlotsSemaphore = sem_open(SEM_EMPTY_SLOTS, QUEUE_SIZE);
-  if (emptySlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  sem_t *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, 0);
-  if (usedSlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  sem_t *queueMutex = sem_open(MUTEX, 1);
-  if (queueMutex == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
+  ConsumerArgs *args = malloc(sizeof(ConsumerArgs));
+  args->manager = manager;
+  args->index = manager->countConsumers;
 
-  while (keepRunningConsumer) {
-    printf(GREEN_COLOR);
-    sem_wait(usedSlotsSemaphore);
-    sem_wait(queueMutex);
-
-    Message *message = removeMessageFromQueue(queue);
-    printMessage(message);
-
-    sem_post(queueMutex);
-    sem_post(emptySlotsSemaphore);
-    printf(STANDART_COLOR);
-    printf("Count removed messages: %d\n", queue->countRemovedMessages);
-    sleep(2);
-  }
-  printf(STANDART_COLOR);
-  munmap(queue, SHM_SIZE);
-  close(shmid);
-  exit(EXIT_SUCCESS);
+  pthread_create(&consumerThread, NULL, consumerFunction, args);
+  manager->consumers[manager->countConsumers++] = consumerThread;
 }
 
-void deleteConsumer() {
-  if (consumersCount == 0) {
+void deleteConsumer(ProducerConsumerManager *manager, int index) {
+  if (manager->countConsumers == 0) {
+    printf("No consumers to delete\n");
     return;
   }
-  printf("Consumer with pid %d was deleted\n",
-         consumersPid[consumersCount - 1]);
-  kill(consumersPid[--consumersCount], SIGUSR1);
+  manager->keepRunningConsumer[index] = 0;
+  pthread_cancel(manager->consumers[index]);
+  pthread_join(manager->consumers[index], NULL);
+  manager->countConsumers--;
+  printf("Consumer deleted\n");
 }
 
-void deleteAllConsumers() {
-  while (consumersCount > 0) {
-    deleteConsumer();
+void deleteAllConsumers(ProducerConsumerManager *manager) {
+  while (manager->countConsumers > 0) {
+    deleteConsumer(manager, manager->countConsumers - 1);
   }
 }

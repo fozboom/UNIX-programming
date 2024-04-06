@@ -1,5 +1,5 @@
 #include "Message.h"
-#include "../projectUtils/Utils.h"
+#include <stdlib.h>
 
 Message *createMessage() {
   size_t size;

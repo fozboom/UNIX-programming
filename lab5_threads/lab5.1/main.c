@@ -1,18 +1,13 @@
+
+#include "projectUtils/ProducerConsumerManager.h"
 #include "projectUtils/Utils.h"
-#include <semaphore.h>
+#include <stdlib.h>
 
 int main() {
+  ProducerConsumerManager *manager =
+      (ProducerConsumerManager *)malloc(sizeof(ProducerConsumerManager));
+  initializeProducerConsumerManager(manager, MAX_COUNT_OF_PRODUCERS,
+                                    MAX_COUNT_OF_CONSUMERS);
 
-  int sharedMemoryId;
-  CircularQueue *queue;
-  sem_t *emptySlotsSemaphore;
-  sem_t *usedSlotsSemaphore;
-
-  initializeSharedMemory(&sharedMemoryId, &queue);
-
-  initializeQueue(queue);
-  initializeHandler();
-
-  handleInput(sharedMemoryId, queue);
-  cleanResources();
+  handleInput(manager);
 }

@@ -1,92 +1,59 @@
 #include "Producer.h"
-#include "../projectUtils/Utils.h"
-#include <sys/mman.h>
 
-volatile sig_atomic_t keepRunningProducer = 1;
+void *producerFunction(void *arg) {
+  ProducerArgs *args = (ProducerArgs *)arg;
+  ProducerConsumerManager *manager = args->manager;
+  int index = args->index;
 
-pid_t producersPid[MAX_COUNT_OF_PRODUCERS];
-size_t producersCount = 0;
+  while (manager->keepRunningProducer[index]) {
+    printf(GREEN_COLOR);
+    sem_wait(&manager->emptySlotsSemaphore);
+    pthread_mutex_lock(&manager->queueMutex);
 
-void createProducer() {
-  if (producersCount == MAX_COUNT_OF_PRODUCERS) {
+    Message *message = createMessage();
+    addMessageToQueue(manager->queue, message);
+    printMessage(message);
+
+    pthread_mutex_unlock(&manager->queueMutex);
+    sem_post(&manager->usedSlotsSemaphore);
+    printf("Count added messages: %d\n", manager->queue->countAddedMessages);
+    sleep(2);
+  }
+  printf(STANDART_COLOR);
+  free(args);
+  return NULL;
+}
+
+void createProducer(ProducerConsumerManager *manager) {
+  if (manager->countProducers == MAX_COUNT_OF_PRODUCERS) {
     printf("Max count of producers is reached\n");
     return;
   }
-  pid_t pid = fork();
+  pthread_t producerThread;
+  manager->keepRunningProducer[manager->countProducers] = 1;
 
-  if (pid == -1) {
-    perror("producer fork");
-    exit(EXIT_FAILURE);
-  } else if (pid == 0) {
-    srand(getpid());
-  } else {
-    producersPid[producersCount++] = pid;
-    return;
-  }
+  ProducerArgs *args = malloc(sizeof(ProducerArgs));
+  args->manager = manager;
+  args->index = manager->countProducers;
 
-  int shmid = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
-  if (shmid == -1) {
-    perror("shm_open");
-    exit(EXIT_FAILURE);
-  }
-  CircularQueue *queue =
-      mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmid, 0);
-  if (queue == MAP_FAILED) {
-    perror("mmap");
-    exit(EXIT_FAILURE);
-  }
-
-  sem_t *emptySlotsSemaphore = sem_open(SEM_EMPTY_SLOTS, QUEUE_SIZE);
-  if (emptySlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  sem_t *usedSlotsSemaphore = sem_open(SEM_USED_SLOTS, 0);
-  if (usedSlotsSemaphore == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  sem_t *queueMutex = sem_open(MUTEX, 1);
-  if (queueMutex == SEM_FAILED) {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-
-  while (keepRunningProducer) {
-    printf(RED_COLOR);
-    sem_wait(emptySlotsSemaphore);
-    sem_wait(queueMutex);
-
-    Message *message;
-    message = createMessage();
-
-    addMessageToQueue(queue, message);
-    printMessage(message);
-
-    sem_post(queueMutex);
-    sem_post(usedSlotsSemaphore);
-    printf(STANDART_COLOR);
-    printf("Count added messages: %u\n", queue->countAddedMessages);
-
-    sleep(4);
-  }
-  printf(STANDART_COLOR);
-
-  munmap(queue, SHM_SIZE);
-  close(shmid);
-  exit(EXIT_SUCCESS);
-}
-void deleteProducer() {
-  if (producersCount == 0) {
-    return;
-  }
-  printf("Producer with pid %d was deleted\n",
-         producersPid[producersCount - 1]);
-  kill(producersPid[--producersCount], SIGUSR2);
+  pthread_create(&producerThread, NULL, producerFunction, args);
+  manager->producers[manager->countProducers++] = producerThread;
 }
 
-void deleteAllProducers() {
-  while (producersCount > 0) {
-    deleteProducer();
+void deleteProducer(ProducerConsumerManager *manager, int index) {
+  if (manager->countProducers == 0) {
+    printf("No producers to delete\n");
+    return;
+  }
+  manager->keepRunningProducer[index] = 0;
+  pthread_cancel(manager->producers[index]);
+  pthread_join(manager->producers[index], NULL);
+  manager->countProducers--;
+  printf("Producer deleted\n");
+}
+
+void deleteAllProducers(ProducerConsumerManager *manager) {
+  while (manager->countProducers > 0) {
+    deleteProducer(manager, manager->countProducers - 1);
   }
 }

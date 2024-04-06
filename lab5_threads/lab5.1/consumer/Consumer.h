@@ -1,20 +1,18 @@
+#ifndef CONSUMER_H
+#define CONSUMER_H
 #include "../circularQueue/CircularQueue.h"
-#include "../message/Message.h"
-#include <semaphore.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/types.h>
+#include "../defines.h"
+#include "../projectUtils/ProducerConsumerManager.h"
 #include <unistd.h>
 
-#define MAX_COUNT_OF_CONSUMERS 5
+typedef struct {
+  ProducerConsumerManager *manager;
+  int index;
+} ConsumerArgs;
 
-extern pid_t consumersPid[];
-extern size_t consumersCount;
-extern volatile sig_atomic_t keepRunningConsumer;
+void *consumerFunction(void *arg);
+void createConsumer(ProducerConsumerManager *manager);
+void deleteConsumer(ProducerConsumerManager *manager, int index);
+void deleteAllConsumers(ProducerConsumerManager *manager);
 
-void createConsumer();
-void deleteConsumer();
-void deleteAllConsumers();
+#endif
