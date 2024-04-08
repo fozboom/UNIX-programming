@@ -7,5 +7,6 @@
 3. [Лабортаорная работа №3](lab3_signals)
 4. [Лабортаорная работа №4](lab4_shared_memory)
 5. 
-    5.1 [Лабортаорная работа №5.1](lab5_threads)
-    5.2 [Лабортаорная работа №5.2](lab5_conditional_variables)
+    - [Лабортаорная работа №5.1](lab5.1_threads)
+    
+    - [Лабортаорная работа №5.2](lab5.2_conditional_variables)
