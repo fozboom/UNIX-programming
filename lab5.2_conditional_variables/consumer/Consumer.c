@@ -7,13 +7,9 @@ void *consumerFunction(void *arg) {
 
   while (manager->keepRunningConsumer[index]) {
     printf(RED_COLOR);
-    sem_wait(&manager->usedSlotsSemaphore);
-    pthread_mutex_lock(&manager->queueMutex);
 
     removeMessageFromQueue(manager->queue);
 
-    pthread_mutex_unlock(&manager->queueMutex);
-    sem_post(&manager->emptySlotsSemaphore);
     printf("Count removed messages: %d\n",
            manager->queue->countRemovedMessages);
     sleep(3);

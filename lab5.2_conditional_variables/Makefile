@@ -3,11 +3,11 @@ CFLAGS = -W -Wall -Wno-unused-parameter -Wno-unused-variable -std=c11 -pedantic 
 LDFLAGS = -lpthread
 
 SRC = main.c \
-      circularQueue/CircularQueue.c \
-      consumer/Consumer.c \
-      message/Message.c \
-      producer/Producer.c \
-      projectUtils/Utils.c
+	circularQueue/CircularQueue.c \
+	consumer/Consumer.c \
+	message/Message.c \
+	producer/Producer.c \
+	projectUtils/Utils.c 
 
 OBJ = $(SRC:.c=.o)
 
@@ -16,7 +16,7 @@ all: program
 program: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c
+%.o: %.c defines.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
@@ -27,4 +27,4 @@ run:
 	./program
 	$(MAKE) clean
 
-.PHONY: all clean rum
+.PHONY: all clean run

@@ -3,6 +3,7 @@
 
 #include "../defines.h"
 #include "../message/Message.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -14,6 +15,7 @@ typedef struct {
   int countAddedMessages;
   int countRemovedMessages;
   int currentSize;
+  pthread_mutex_t mutex;
 } CircularQueue;
 
 void addMessageToQueue(CircularQueue *queue, Message *message);

@@ -7,15 +7,11 @@ void *producerFunction(void *arg) {
 
   while (manager->keepRunningProducer[index]) {
     printf(GREEN_COLOR);
-    sem_wait(&manager->emptySlotsSemaphore);
-    pthread_mutex_lock(&manager->queueMutex);
 
     Message *message = createMessage();
     addMessageToQueue(manager->queue, message);
     printMessage(message);
 
-    pthread_mutex_unlock(&manager->queueMutex);
-    sem_post(&manager->usedSlotsSemaphore);
     printf("Count added messages: %d\n", manager->queue->countAddedMessages);
     sleep(2);
   }

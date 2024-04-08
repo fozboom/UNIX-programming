@@ -57,13 +57,13 @@ void printMenu() {
 void initializeSemaphoresAndMutex(ProducerConsumerManager *manager) {
   sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
   sem_init(&manager->usedSlotsSemaphore, 0, 0);
-  pthread_mutex_init(&manager->queueMutex, NULL);
+  pthread_mutex_init(&manager->queue->mutex, NULL);
 }
 
 void destroySemaphoresAndMutex(ProducerConsumerManager *manager) {
   sem_destroy(&manager->emptySlotsSemaphore);
   sem_destroy(&manager->usedSlotsSemaphore);
-  pthread_mutex_destroy(&manager->queueMutex);
+  pthread_mutex_destroy(&manager->queue->mutex);
   printf("Semaphores and mutex are destroyed\n");
 }
 
@@ -74,7 +74,6 @@ void initializeProducerConsumerManager(ProducerConsumerManager *manager,
 
   sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
   sem_init(&manager->usedSlotsSemaphore, 0, 0);
-  pthread_mutex_init(&manager->queueMutex, NULL);
 
   manager->producers = malloc(maxProducers * sizeof(pthread_t));
   manager->consumers = malloc(maxConsumers * sizeof(pthread_t));
