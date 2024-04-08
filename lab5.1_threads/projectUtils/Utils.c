@@ -55,8 +55,15 @@ void printMenu() {
 }
 
 void initializeSemaphoresAndMutex(ProducerConsumerManager *manager) {
-  sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
-  sem_init(&manager->usedSlotsSemaphore, 0, 0);
+  // 0 - shared between threads, 1 - shared between processes
+  if (sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE) == -1) {
+    perror("sem_init");
+    exit(1);
+  }
+  if (sem_init(&manager->usedSlotsSemaphore, 0, 0)) {
+    perror("sem_init");
+    exit(1);
+  }
   pthread_mutex_init(&manager->queue->mutex, NULL);
 }
 

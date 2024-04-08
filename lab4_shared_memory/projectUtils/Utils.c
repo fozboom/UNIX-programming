@@ -40,6 +40,8 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
       close(sharedMemoryDescriptor);
       shm_unlink(SHARED_MEMORY_NAME);
       return;
+    default:
+      printf("Input command error");
     }
   }
 }
@@ -56,7 +58,7 @@ void initializeHandler() {
   struct sigaction act;
   act.sa_sigaction = &handleSIGUSR1;
   act.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDWAIT;
-  sigaction(SIGINT, &act, NULL);
+  sigaction(SIGUSR1, &act, NULL);
 
   act.sa_sigaction = &handleSIGUSR2;
   sigaction(SIGUSR2, &act, NULL);
@@ -112,9 +114,15 @@ void initializeSemaphores(sem_t **emptySlotsSemaphore,
 
 void cleanResources() {
   shm_unlink(SHARED_MEMORY_NAME);
-  sem_unlink(SEM_EMPTY_SLOTS);
-  sem_unlink(SEM_USED_SLOTS);
-  sem_unlink(MUTEX);
+  if (sem_unlink(SEM_EMPTY_SLOTS) == -1) {
+    perror("sem_unlink");
+  }
+  if (sem_unlink(SEM_USED_SLOTS) == -1) {
+    perror("sem_unlink");
+  }
+  if (sem_unlink(MUTEX) == -1) {
+    perror("sem_unlink");
+  }
 }
 
 void closeSemaphores(sem_t *emptySlotsSemaphore, sem_t *usedSlotsSemaphore,

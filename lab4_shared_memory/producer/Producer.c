@@ -80,7 +80,7 @@ void createProducer() {
     sleep(4);
   }
   printf(STANDART_COLOR);
-
+  printf("Producer with pid %d was deleted\n", getpid());
   munmap(queue, SHM_SIZE);
   close(shmid);
   exit(EXIT_SUCCESS);
@@ -89,8 +89,6 @@ void deleteProducer() {
   if (producersCount == 0) {
     return;
   }
-  printf("Producer with pid %d was deleted\n",
-         producersPid[producersCount - 1]);
   kill(producersPid[--producersCount], SIGUSR2);
 }
 
