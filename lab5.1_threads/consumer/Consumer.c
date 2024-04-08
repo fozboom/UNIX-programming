@@ -45,6 +45,7 @@ void deleteConsumer(ProducerConsumerManager *manager, int index) {
     return;
   }
   manager->keepRunningConsumer[index] = 0;
+
   pthread_cancel(manager->consumers[index]);
   pthread_join(manager->consumers[index], NULL);
   manager->countConsumers--;
