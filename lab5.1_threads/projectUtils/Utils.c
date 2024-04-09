@@ -32,6 +32,18 @@ void handleInput(ProducerConsumerManager *manager) {
     case 'i':
       printQueueStatusInfo(manager->queue);
       break;
+    case '+':
+      pthread_mutex_lock(&manager->queue->mutex);
+      increaseQueueSize(manager->queue);
+      sem_post(&manager->emptySlotsSemaphore);
+      pthread_mutex_unlock(&manager->queue->mutex);
+      break;
+    case '-':
+      pthread_mutex_lock(&manager->queue->mutex);
+      decreaseQueueSize(manager->queue);
+      sem_post(&manager->usedSlotsSemaphore);
+      pthread_mutex_unlock(&manager->queue->mutex);
+      break;
     case 'q':
       printf(STANDART_COLOR);
       deleteAllProducers(manager);
@@ -39,6 +51,9 @@ void handleInput(ProducerConsumerManager *manager) {
       destroySemaphoresAndMutex(manager);
       freeProducerConsumerManager(manager);
       return;
+    default:
+      printf("Invalid option\n");
+      break;
     }
   }
 }

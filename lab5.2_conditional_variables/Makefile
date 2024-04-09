@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -W -Wall -Wno-unused-parameter -Wno-unused-variable -std=c11 -pedantic -D_XOPEN_SOURCE=700
+CFLAGS = -W -Wall -Wno-unused-parameter -Wno-unused-variable -std=c11 -pedantic -D_XOPEN_SOURCE=700 -pthread
 LDFLAGS = -lpthread
 
 SRC = main.c \

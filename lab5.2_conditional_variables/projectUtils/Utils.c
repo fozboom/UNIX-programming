@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include <stdlib.h>
 
 void printQueueStatusInfo(CircularQueue *queue) {
   printf(YELLOW_COLOR);
@@ -43,7 +44,10 @@ void handleInput(ProducerConsumerManager *manager) {
       deleteAllProducers(manager);
       deleteAllConsumers(manager);
       freeProducerConsumerManager(manager);
-      return;
+      exit(EXIT_SUCCESS);
+    default:
+      printf("Invalid input\n");
+      break;
     }
   }
 }

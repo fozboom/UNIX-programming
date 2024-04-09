@@ -53,7 +53,6 @@ void freeQueue(CircularQueue *queue) {
 }
 
 void increaseQueueSize(CircularQueue *queue) {
-  pthread_mutex_lock(&queue->mutex);
   int newCapacity = queue->maxCapacity + 1;
   queue->messages = realloc(queue->messages, newCapacity * sizeof(Message *));
   if (queue->headPosition > queue->tailPosition) {
@@ -62,11 +61,9 @@ void increaseQueueSize(CircularQueue *queue) {
     queue->tailPosition += queue->maxCapacity;
   }
   queue->maxCapacity = newCapacity;
-  pthread_mutex_unlock(&queue->mutex);
 }
 
 void decreaseQueueSize(CircularQueue *queue) {
-  pthread_mutex_lock(&queue->mutex);
   if (queue->maxCapacity > 1 && queue->currentSize < queue->maxCapacity - 1) {
     int newCapacity = queue->maxCapacity - 1;
     if (queue->headPosition > queue->tailPosition) {
@@ -81,9 +78,13 @@ void decreaseQueueSize(CircularQueue *queue) {
       }
     }
     queue->messages = realloc(queue->messages, newCapacity * sizeof(Message *));
+    queue->messages[queue->maxCapacity] = NULL;
+    if (queue->messages == NULL) {
+      printf("Memory reallocation failed\n");
+      return;
+    }
     queue->maxCapacity = newCapacity;
   } else {
     printf("Queue size can't be decreased\n");
   }
-  pthread_mutex_unlock(&queue->mutex);
 }

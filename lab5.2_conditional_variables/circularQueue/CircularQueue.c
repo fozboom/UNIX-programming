@@ -17,7 +17,6 @@ void initializeQueue(CircularQueue *queue) {
 }
 
 void addMessageToQueue(CircularQueue *queue, Message *message) {
-  pthread_mutex_lock(&queue->mutex);
   while (queue->currentSize == queue->maxCapacity) {
     pthread_cond_wait(&queue->notFull, &queue->mutex);
   }
@@ -25,23 +24,15 @@ void addMessageToQueue(CircularQueue *queue, Message *message) {
   queue->tailPosition = (queue->tailPosition + 1) % queue->maxCapacity;
   queue->currentSize++;
   queue->countAddedMessages++;
-  pthread_cond_signal(&queue->notEmpty);
-  pthread_mutex_unlock(&queue->mutex);
 }
 
 void removeMessageFromQueue(CircularQueue *queue) {
-  pthread_mutex_lock(&queue->mutex);
-  while (queue->currentSize == 0) {
-    pthread_cond_wait(&queue->notEmpty, &queue->mutex);
-  }
   printMessage(queue->messages[queue->headPosition]);
   free(queue->messages[queue->headPosition]);
   queue->messages[queue->headPosition] = NULL;
   queue->headPosition = (queue->headPosition + 1) % queue->maxCapacity;
   queue->currentSize--;
   queue->countRemovedMessages++;
-  pthread_cond_signal(&queue->notFull);
-  pthread_mutex_unlock(&queue->mutex);
 }
 
 void freeQueue(CircularQueue *queue) {
@@ -58,6 +49,7 @@ void freeQueue(CircularQueue *queue) {
 
 void increaseQueueSize(CircularQueue *queue) {
   pthread_mutex_lock(&queue->mutex);
+  printf("Increasing queue size\n");
   int newCapacity = queue->maxCapacity + 1;
   queue->messages = realloc(queue->messages, newCapacity * sizeof(Message *));
   if (queue->headPosition > queue->tailPosition) {
@@ -68,6 +60,7 @@ void increaseQueueSize(CircularQueue *queue) {
   queue->maxCapacity = newCapacity;
   pthread_cond_broadcast(&queue->notFull);
   pthread_mutex_unlock(&queue->mutex);
+  printf("Queue size increased\n");
 }
 
 void decreaseQueueSize(CircularQueue *queue) {
@@ -87,6 +80,7 @@ void decreaseQueueSize(CircularQueue *queue) {
     }
     queue->messages = realloc(queue->messages, newCapacity * sizeof(Message *));
     queue->maxCapacity = newCapacity;
+    pthread_cond_broadcast(&queue->notEmpty);
   } else {
     printf("Queue size can't be decreased\n");
   }

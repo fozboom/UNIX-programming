@@ -37,6 +37,7 @@ void handleInput(int sharedMemoryDescriptor, CircularQueue *queue) {
       deleteAllProducers();
       deleteAllConsumers();
       munmap(queue, SHM_SIZE);
+      cleanResources();
       close(sharedMemoryDescriptor);
       shm_unlink(SHARED_MEMORY_NAME);
       return;
@@ -52,6 +53,13 @@ void handleSIGUSR2(int signal, siginfo_t *info, void *ptr) {
 
 void handleSIGUSR1(int signal, siginfo_t *info, void *ptr) {
   keepRunningConsumer = 0;
+}
+
+void handleSIGINT(int signal, siginfo_t *info, void *ptr) {
+  deleteAllProducers();
+  deleteAllConsumers();
+  cleanResources();
+  exit(EXIT_SUCCESS);
 }
 
 void initializeHandler() {

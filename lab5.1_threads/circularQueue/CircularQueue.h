@@ -25,5 +25,7 @@ int isQueueFull(CircularQueue *queue);
 void initializeQueue(CircularQueue *queue);
 void printLastMessage(CircularQueue *queue);
 void freeQueue(CircularQueue *queue);
+void increaseQueueSize(CircularQueue *queue);
+void decreaseQueueSize(CircularQueue *queue);
 
 #endif
