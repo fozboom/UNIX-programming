@@ -1,4 +1,5 @@
 #include "Producer.h"
+#include <pthread.h>
 
 void *producerFunction(void *arg) {
   ProducerArgs *args = (ProducerArgs *)arg;
@@ -6,20 +7,24 @@ void *producerFunction(void *arg) {
   int index = args->index;
 
   while (manager->keepRunningProducer[index]) {
-    printf(GREEN_COLOR);
     sem_wait(&manager->emptySlotsSemaphore);
     pthread_mutex_lock(&manager->queue->mutex);
-
+    if (isQueueFull(manager->queue)) {
+      pthread_mutex_unlock(&manager->queue->mutex);
+      sem_post(&manager->emptySlotsSemaphore);
+      continue;
+    }
+    printf(GREEN_COLOR);
     Message *message = createMessage();
     addMessageToQueue(manager->queue, message);
     printMessage(message);
-
-    pthread_mutex_unlock(&manager->queue->mutex);
+    printf(STANDART_COLOR);
     sem_post(&manager->usedSlotsSemaphore);
+    pthread_mutex_unlock(&manager->queue->mutex);
     printf("Count added messages: %d\n", manager->queue->countAddedMessages);
     sleep(2);
   }
-  printf(STANDART_COLOR);
+
   free(args);
   return NULL;
 }
@@ -41,15 +46,18 @@ void createProducer(ProducerConsumerManager *manager) {
 }
 
 void deleteProducer(ProducerConsumerManager *manager, int index) {
+  pthread_mutex_lock(&manager->queue->mutex);
   if (manager->countProducers == 0) {
     printf("No producers to delete\n");
+    pthread_mutex_unlock(&manager->queue->mutex);
     return;
   }
   manager->keepRunningProducer[index] = 0;
   pthread_cancel(manager->producers[index]);
-  pthread_join(manager->producers[index], NULL);
+  pthread_detach(manager->producers[index]);
   manager->countProducers--;
   printf("Producer deleted\n");
+  pthread_mutex_unlock(&manager->queue->mutex);
 }
 
 void deleteAllProducers(ProducerConsumerManager *manager) {

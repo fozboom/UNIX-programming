@@ -12,7 +12,7 @@ int main() {
   initializeSharedMemory(&sharedMemoryId, &queue);
   initializeSemaphores(&emptySlotsSemaphore, &usedSlotsSemaphore, &queueMutex);
 
-  initializeQueue(queue);
+  initializeQueue(&queue);
   initializeHandler();
 
   handleInput(sharedMemoryId, queue);

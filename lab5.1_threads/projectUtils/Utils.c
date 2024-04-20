@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include <stdio.h>
 
 void printQueueStatusInfo(CircularQueue *queue) {
   printf(YELLOW_COLOR);
@@ -14,8 +15,10 @@ void handleInput(ProducerConsumerManager *manager) {
   char symbol;
   printMenu();
   while (1) {
-    symbol = getchar();
-    getchar();
+    scanf("%c", &symbol);
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF)
+      ;
     switch (symbol) {
     case 'P':
       createProducer(manager);
@@ -33,22 +36,17 @@ void handleInput(ProducerConsumerManager *manager) {
       printQueueStatusInfo(manager->queue);
       break;
     case '+':
-      pthread_mutex_lock(&manager->queue->mutex);
       increaseQueueSize(manager->queue);
       sem_post(&manager->emptySlotsSemaphore);
-      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case '-':
-      pthread_mutex_lock(&manager->queue->mutex);
       decreaseQueueSize(manager->queue);
       sem_post(&manager->usedSlotsSemaphore);
-      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case 'q':
       printf(STANDART_COLOR);
       deleteAllProducers(manager);
       deleteAllConsumers(manager);
-      destroySemaphoresAndMutex(manager);
       freeProducerConsumerManager(manager);
       return;
     default:
@@ -70,7 +68,6 @@ void printMenu() {
 }
 
 void initializeSemaphoresAndMutex(ProducerConsumerManager *manager) {
-  // 0 - shared between threads, 1 - shared between processes
   if (sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE) == -1) {
     perror("sem_init");
     exit(1);
@@ -94,8 +91,7 @@ void initializeProducerConsumerManager(ProducerConsumerManager *manager,
   manager->queue = malloc(sizeof(CircularQueue));
   initializeQueue(manager->queue);
 
-  sem_init(&manager->emptySlotsSemaphore, 0, QUEUE_SIZE);
-  sem_init(&manager->usedSlotsSemaphore, 0, 0);
+  initializeSemaphoresAndMutex(manager);
 
   manager->producers = malloc(maxProducers * sizeof(pthread_t));
   manager->consumers = malloc(maxConsumers * sizeof(pthread_t));
@@ -107,19 +103,20 @@ void initializeProducerConsumerManager(ProducerConsumerManager *manager,
   manager->countConsumers = 0;
 
   for (int i = 0; i < maxProducers; i++) {
-    manager->keepRunningProducer[i] = 1;
+    manager->keepRunningProducer[i] = 0;
   }
   for (int i = 0; i < maxConsumers; i++) {
-    manager->keepRunningConsumer[i] = 1;
+    manager->keepRunningConsumer[i] = 0;
   }
 }
 
 void freeProducerConsumerManager(ProducerConsumerManager *manager) {
+  free(manager->queue);
+  destroySemaphoresAndMutex(manager);
   free(manager->producers);
   free(manager->consumers);
   free(manager->keepRunningProducer);
   free(manager->keepRunningConsumer);
-  free(manager->queue);
   free(manager);
   printf("ProducerConsumerManager is freed\n");
 }
