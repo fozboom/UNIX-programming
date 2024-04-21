@@ -4,6 +4,7 @@
 #include "../defines.h"
 #include "../message/Message.h"
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,16 +17,16 @@ typedef struct {
   int countRemovedMessages;
   int currentSize;
   pthread_mutex_t mutex;
-  pthread_cond_t notFull;
-  pthread_cond_t notEmpty;
+  pthread_cond_t canRead;
+  pthread_cond_t canWrite;
 } CircularQueue;
-
 void addMessageToQueue(CircularQueue *queue, Message *message);
 void removeMessageFromQueue(CircularQueue *queue);
 void initializeQueue(CircularQueue *queue);
-void printLastMessage(CircularQueue *queue);
 void freeQueue(CircularQueue *queue);
-void increaseQueueSize(CircularQueue *queue);
-void decreaseQueueSize(CircularQueue *queue);
+bool increaseQueueSize(CircularQueue *queue);
+bool decreaseQueueSize(CircularQueue *queue);
+bool isQueueFull(CircularQueue *queue);
+bool isQueueEmpty(CircularQueue *queue);
 
 #endif

@@ -8,16 +8,12 @@
 #include <signal.h>
 
 typedef struct {
-  sem_t emptySlotsSemaphore;
-  sem_t usedSlotsSemaphore;
+  CircularQueue *queue;
   pthread_t *producers;
   pthread_t *consumers;
-  CircularQueue *queue;
-  pthread_mutex_t queueMutex;
   int countProducers;
   int countConsumers;
   sig_atomic_t *keepRunningProducer;
   sig_atomic_t *keepRunningConsumer;
 } ProducerConsumerManager;
-
 #endif

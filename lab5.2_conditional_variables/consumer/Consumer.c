@@ -8,34 +8,26 @@ void *consumerFunction(void *arg) {
 
   while (manager->keepRunningConsumer[index]) {
     pthread_mutex_lock(&manager->queue->mutex);
-    while (manager->queue->countAddedMessages -
-               manager->queue->countRemovedMessages <=
-           0) {
-      if (!manager->keepRunningConsumer[index]) {
-        pthread_cond_signal(&manager->queue->notFull);
-        pthread_mutex_unlock(&manager->queue->mutex);
-        break;
-      }
-      pthread_cond_wait(&manager->queue->notEmpty, &manager->queue->mutex);
+    while (manager->keepRunningConsumer[index] &&
+           isQueueEmpty(manager->queue)) {
+      pthread_cond_wait(&manager->queue->canRead, &manager->queue->mutex);
     }
     if (!manager->keepRunningConsumer[index]) {
+      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     }
-
     printf(RED_COLOR);
-
     removeMessageFromQueue(manager->queue);
-
     printf("Count removed messages: %d\n",
            manager->queue->countRemovedMessages);
-
-    pthread_cond_signal(&manager->queue->notFull);
+    printf(STANDART_COLOR);
+    pthread_cond_signal(&manager->queue->canWrite);
     pthread_mutex_unlock(&manager->queue->mutex);
     sleep(3);
   }
-  printf(STANDART_COLOR);
+
   free(args);
-  return NULL;
+  pthread_exit(NULL);
 }
 
 void createConsumer(ProducerConsumerManager *manager) {
@@ -55,15 +47,20 @@ void createConsumer(ProducerConsumerManager *manager) {
 }
 
 void deleteConsumer(ProducerConsumerManager *manager, int index) {
+  pthread_mutex_lock(&manager->queue->mutex);
   if (manager->countConsumers == 0) {
     printf("No consumers to delete\n");
+    pthread_mutex_unlock(&manager->queue->mutex);
     return;
   }
   manager->keepRunningConsumer[index] = 0;
-  pthread_cond_broadcast(&manager->queue->notEmpty);
   pthread_cancel(manager->consumers[index]);
+
+  pthread_detach(manager->consumers[index]);
   manager->countConsumers--;
   printf("Consumer deleted\n");
+  pthread_mutex_unlock(&manager->queue->mutex);
+  pthread_cond_broadcast(&manager->queue->canRead);
 }
 
 void deleteAllConsumers(ProducerConsumerManager *manager) {
