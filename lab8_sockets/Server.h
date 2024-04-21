@@ -40,6 +40,7 @@ public:
   std::string listDirectory(const std::string &path, const std::string &prefix);
   void writeToSocket(int clientDescriptor, const std::string &message);
   std::string readFromSocket(int clientDescriptor);
-
+  void handleFileCommands(const std::string &command, int clientDescriptor,
+                          bool *isRunning);
   ~Server();
 };

@@ -86,6 +86,9 @@ void Server::parseMessage(std::string &message, int clientDescriptor,
   } else if (message.substr(0, 4) == "LIST") {
     std::lock_guard<std::mutex> lock(mutex);
     response = listDirectory(".", "");
+  } else if (message[0] == '@') {
+    handleFileCommands(message.substr(1), clientDescriptor, isRunning);
+    return;
   } else {
     response = "Invalid command";
   }
@@ -113,6 +116,23 @@ std::string Server::listDirectory(const std::string &path,
     }
   }
   return result;
+}
+
+void Server::handleFileCommands(const std::string &filename,
+                                int clientDescriptor, bool *isRunning) {
+  std::ifstream file(filename);
+  if (!file.is_open()) {
+    std::string response = "Error opening file";
+    writeToSocket(clientDescriptor, response);
+  } else {
+    std::string line;
+    while (std::getline(file, line)) {
+      parseMessage(line, clientDescriptor, isRunning);
+      if (!*isRunning) {
+        break;
+      }
+    }
+  }
 }
 
 std::string Server::getFileContents(const std::string &filePath) {
@@ -146,18 +166,7 @@ void Server::changeDirectory(const std::string &path, int clientDescriptor) {
     }
   }
 
-  // Send the size of the response first
-  uint32_t responseSize =
-      htonl(response.size()); // Convert to network byte order
-  if (write(clientDescriptor, &responseSize, sizeof(responseSize)) == -1) {
-    std::cerr << "Error sending response size" << std::endl;
-    return;
-  }
-
-  // Then send the response itself
-  if (write(clientDescriptor, response.c_str(), response.size()) == -1) {
-    std::cerr << "Error sending response" << std::endl;
-  }
+  writeToSocket(clientDescriptor, response);
 }
 
 std::string Server::getCurrentTime() const {
