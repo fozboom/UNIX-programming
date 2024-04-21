@@ -39,14 +39,16 @@ void handleInput(ProducerConsumerManager *manager) {
       break;
     case '+':
       pthread_mutex_lock(&manager->queue->mutex);
-      increaseQueueSize(manager->queue);
-      sem_post(&manager->emptySlotsSemaphore);
+      if (increaseQueueSize(manager->queue)) {
+        sem_post(&manager->emptySlotsSemaphore);
+      }
       pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case '-':
       pthread_mutex_lock(&manager->queue->mutex);
-      decreaseQueueSize(manager->queue);
-      sem_post(&manager->usedSlotsSemaphore);
+      if (decreaseQueueSize(manager->queue)) {
+        sem_post(&manager->usedSlotsSemaphore);
+      }
       pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case 'q':

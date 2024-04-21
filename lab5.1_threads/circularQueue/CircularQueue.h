@@ -4,6 +4,7 @@
 #include "../defines.h"
 #include "../message/Message.h"
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -25,7 +26,7 @@ int isQueueFull(CircularQueue *queue);
 void initializeQueue(CircularQueue *queue);
 void printLastMessage(CircularQueue *queue);
 void freeQueue(CircularQueue *queue);
-void increaseQueueSize(CircularQueue *queue);
-void decreaseQueueSize(CircularQueue *queue);
+bool increaseQueueSize(CircularQueue *queue);
+bool decreaseQueueSize(CircularQueue *queue);
 
 #endif

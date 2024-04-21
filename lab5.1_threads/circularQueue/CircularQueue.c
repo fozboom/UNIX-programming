@@ -46,12 +46,12 @@ void freeQueue(CircularQueue *queue) {
   free(queue->messages);
 }
 
-void increaseQueueSize(CircularQueue *queue) {
+bool increaseQueueSize(CircularQueue *queue) {
   int newSize = queue->maxCapacity + 1;
 
   Message **newMessages = (Message **)malloc(newSize * sizeof(Message *));
   if (newMessages == NULL) {
-    return;
+    return false;
   }
 
   for (int i = 0; i < queue->currentSize; i++) {
@@ -65,18 +65,19 @@ void increaseQueueSize(CircularQueue *queue) {
   queue->tailPosition = queue->currentSize % newSize;
   queue->maxCapacity = newSize;
   printf("Queue size increased to %d\n", newSize);
+  return true;
 }
 
-void decreaseQueueSize(CircularQueue *queue) {
+bool decreaseQueueSize(CircularQueue *queue) {
   int newSize = queue->maxCapacity - 1;
   if (isQueueFull(queue)) {
     printf("Queue is full\n");
-    return;
+    return false;
   }
 
   Message **newMessages = (Message **)malloc(newSize * sizeof(Message *));
   if (newMessages == NULL) {
-    return;
+    return false;
   }
 
   for (int i = 0; i < newSize; i++) {
@@ -90,4 +91,5 @@ void decreaseQueueSize(CircularQueue *queue) {
   queue->tailPosition = queue->currentSize % newSize;
   queue->maxCapacity = newSize;
   printf("Queue size decreased to %d\n", newSize);
+  return true;
 }
