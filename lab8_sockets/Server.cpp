@@ -1,4 +1,7 @@
 #include "Server.h"
+#include <filesystem>
+#include <mutex>
+#include <unistd.h>
 
 Server::Server(int port) {
   serverDescriptor = socket(AF_INET, SOCK_STREAM, 0);
@@ -26,11 +29,20 @@ Server::Server(int port) {
 }
 
 void Server::start() {
-  while (true) {
+  if (fcntl(serverDescriptor, F_SETFL, O_NONBLOCK) < 0) {
+    std::cerr << "Error setting socket to non-blocking mode" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  while (isRunning) {
     int client_descriptor = accept(serverDescriptor, NULL, NULL);
     if (client_descriptor == -1) {
-      std::cerr << "Error accepting connection" << std::endl;
-      exit(EXIT_FAILURE);
+      if (errno == EWOULDBLOCK || errno == EAGAIN) {
+        usleep(1000);
+        continue;
+      } else {
+        std::cerr << "Error accepting connection" << std::endl;
+        exit(EXIT_FAILURE);
+      }
     }
 
     std::cout << getCurrentTime() << " Client connected" << std::endl;
@@ -70,16 +82,39 @@ void Server::parseMessage(std::string &message, int clientDescriptor,
     *isRunning = false;
     close(clientDescriptor);
   } else if (message.substr(0, 4) == "INFO") {
-    sendFileContents("/serverInfo.txt", clientDescriptor);
+    sendFileContents("./serverInfo.txt", clientDescriptor);
   } else if (message.substr(0, 2) == "CD") {
     changeDirectory(message.substr(3), clientDescriptor);
   } else if (message.substr(0, 4) == "LIST") {
-    system("ls > /tmp/list.txt");
-    sendFileContents("/tmp/list.txt", clientDescriptor);
+    std::lock_guard<std::mutex> lock(mutex);
+    std::string list = listDirectory(".", "");
+    write(clientDescriptor, list.c_str(), list.size());
   } else {
     std::string error = "Invalid command";
     write(clientDescriptor, error.c_str(), error.size());
   }
+}
+
+std::string Server::listDirectory(const std::string &path,
+                                  const std::string &prefix) {
+  std::string result;
+  for (const auto &entry : std::filesystem::directory_iterator(path)) {
+    if (entry.is_directory()) {
+      result += prefix + entry.path().filename().string() + "/\n";
+      result += listDirectory(entry.path().string(), prefix + "  ");
+    } else if (entry.is_symlink()) {
+      auto target = std::filesystem::read_symlink(entry.path());
+      result += prefix + entry.path().filename().string() + " --> ";
+      if (std::filesystem::is_regular_file(target)) {
+        result += " " + target.filename().string() + "\n";
+      } else if (std::filesystem::is_symlink(target)) {
+        result += "> " + target.filename().string() + "\n";
+      }
+    } else if (entry.is_regular_file()) {
+      result += prefix + entry.path().filename().string() + "\n";
+    }
+  }
+  return result;
 }
 
 void Server::sendFileContents(const std::string &filePath,

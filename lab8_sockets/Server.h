@@ -1,10 +1,15 @@
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <ctime>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -17,6 +22,8 @@ class Server {
   int serverDescriptor;
   struct sockaddr_in serverAddress;
   std::vector<std::thread> clientThreads;
+  std::atomic<bool> isRunning;
+  std::mutex mutex;
 
 public:
   Server(int port);
@@ -29,6 +36,8 @@ public:
   void changeDirectory(const std::string &path, int clientDescriptor);
   int getServerDescriptor() const { return serverDescriptor; }
   std::string getCurrentTime() const;
+  void stop() { isRunning = false; }
+  std::string listDirectory(const std::string &path, const std::string &prefix);
 
   ~Server();
 };
