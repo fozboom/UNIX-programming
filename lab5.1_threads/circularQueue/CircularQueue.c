@@ -47,62 +47,47 @@ void freeQueue(CircularQueue *queue) {
 }
 
 void increaseQueueSize(CircularQueue *queue) {
-  pthread_mutex_lock(&queue->mutex);
-  int newCapacity = queue->maxCapacity + 1;
-  Message **newMessages =
-      realloc(queue->messages, newCapacity * sizeof(Message *));
+  int newSize = queue->maxCapacity + 1;
+
+  Message **newMessages = (Message **)malloc(newSize * sizeof(Message *));
   if (newMessages == NULL) {
-    printf("Memory reallocation failed\n");
-    pthread_mutex_unlock(&queue->mutex);
     return;
   }
-  if (queue->headPosition < queue->tailPosition) {
-    memmove(&newMessages[0], &queue->messages[queue->headPosition],
-            (queue->maxCapacity - queue->headPosition) * sizeof(Message *));
-    memmove(&newMessages[newCapacity - queue->headPosition],
-            &queue->messages[0], queue->tailPosition * sizeof(Message *));
-    queue->headPosition = 0;
-    queue->tailPosition = queue->currentSize;
-  } else {
-    memmove(&newMessages[0], &queue->messages[queue->headPosition],
-            queue->currentSize * sizeof(Message *));
-    queue->headPosition = 0;
-    queue->tailPosition = queue->currentSize;
+
+  for (int i = 0; i < queue->currentSize; i++) {
+    newMessages[i] =
+        queue->messages[(queue->headPosition + i) % queue->maxCapacity];
   }
 
-  queue->maxCapacity = newCapacity;
+  free(queue->messages);
   queue->messages = newMessages;
-  printf("Queue size increased\n");
-  pthread_mutex_unlock(&queue->mutex);
+  queue->headPosition = 0;
+  queue->tailPosition = queue->currentSize % newSize;
+  queue->maxCapacity = newSize;
+  printf("Queue size increased to %d\n", newSize);
 }
 
 void decreaseQueueSize(CircularQueue *queue) {
-  pthread_mutex_lock(&queue->mutex);
-
-  if (queue->currentSize < queue->maxCapacity) {
-    int newCapacity = queue->maxCapacity - 1;
-    Message **newMessages =
-        realloc(queue->messages, newCapacity * sizeof(Message *));
-
-    if (newMessages == NULL) {
-      printf("Memory reallocation failed\n");
-      pthread_mutex_unlock(&queue->mutex);
-      return;
-    }
-
-    if (queue->headPosition > queue->tailPosition) {
-      memmove(&newMessages[queue->headPosition - 1],
-              &newMessages[queue->headPosition],
-              (queue->maxCapacity - queue->headPosition) * sizeof(Message *));
-      queue->headPosition--;
-    }
-
-    queue->messages = newMessages;
-    queue->maxCapacity = newCapacity;
-    printf("Queue size decreased\n");
-  } else {
-    printf("Cannot decrease size, queue is full\n");
+  int newSize = queue->maxCapacity - 1;
+  if (isQueueFull(queue)) {
+    printf("Queue is full\n");
+    return;
   }
 
-  pthread_mutex_unlock(&queue->mutex);
+  Message **newMessages = (Message **)malloc(newSize * sizeof(Message *));
+  if (newMessages == NULL) {
+    return;
+  }
+
+  for (int i = 0; i < newSize; i++) {
+    newMessages[i] =
+        queue->messages[(queue->headPosition + i) % queue->maxCapacity];
+  }
+
+  free(queue->messages);
+  queue->messages = newMessages;
+  queue->headPosition = 0;
+  queue->tailPosition = queue->currentSize % newSize;
+  queue->maxCapacity = newSize;
+  printf("Queue size decreased to %d\n", newSize);
 }

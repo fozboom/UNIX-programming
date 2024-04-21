@@ -11,7 +11,7 @@ void *consumerFunction(void *arg) {
     pthread_mutex_lock(&manager->queue->mutex);
     if (isQueueEmpty(manager->queue)) {
       pthread_mutex_unlock(&manager->queue->mutex);
-      sem_post(&manager->usedSlotsSemaphore);
+      // sem_post(&manager->usedSlotsSemaphore);
       continue;
     }
     printf(RED_COLOR);

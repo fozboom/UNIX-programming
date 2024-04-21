@@ -11,7 +11,7 @@ void *producerFunction(void *arg) {
     pthread_mutex_lock(&manager->queue->mutex);
     if (isQueueFull(manager->queue)) {
       pthread_mutex_unlock(&manager->queue->mutex);
-      sem_post(&manager->emptySlotsSemaphore);
+      // sem_post(&manager->emptySlotsSemaphore);
       continue;
     }
     printf(GREEN_COLOR);
@@ -22,7 +22,7 @@ void *producerFunction(void *arg) {
     sem_post(&manager->usedSlotsSemaphore);
     pthread_mutex_unlock(&manager->queue->mutex);
     printf("Count added messages: %d\n", manager->queue->countAddedMessages);
-    sleep(2);
+    sleep(3);
   }
 
   free(args);

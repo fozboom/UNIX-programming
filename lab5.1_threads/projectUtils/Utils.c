@@ -33,15 +33,21 @@ void handleInput(ProducerConsumerManager *manager) {
       deleteConsumer(manager, manager->countConsumers - 1);
       break;
     case 'i':
+      pthread_mutex_lock(&manager->queue->mutex);
       printQueueStatusInfo(manager->queue);
+      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case '+':
+      pthread_mutex_lock(&manager->queue->mutex);
       increaseQueueSize(manager->queue);
       sem_post(&manager->emptySlotsSemaphore);
+      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case '-':
+      pthread_mutex_lock(&manager->queue->mutex);
       decreaseQueueSize(manager->queue);
       sem_post(&manager->usedSlotsSemaphore);
+      pthread_mutex_unlock(&manager->queue->mutex);
       break;
     case 'q':
       printf(STANDART_COLOR);
@@ -111,8 +117,9 @@ void initializeProducerConsumerManager(ProducerConsumerManager *manager,
 }
 
 void freeProducerConsumerManager(ProducerConsumerManager *manager) {
-  free(manager->queue);
   destroySemaphoresAndMutex(manager);
+  freeQueue(manager->queue);
+  free(manager->queue);
   free(manager->producers);
   free(manager->consumers);
   free(manager->keepRunningProducer);
