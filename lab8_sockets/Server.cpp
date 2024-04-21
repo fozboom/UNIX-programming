@@ -58,41 +58,39 @@ void Server::start() {
 
 void Server::handleClient(int clientDescriptor) {
   bool isRunning = true;
-  std::string message;
   while (isRunning) {
-    char buffer[256];
-    int bytesRead = read(clientDescriptor, buffer, 256);
-
-    if (bytesRead == -1) {
-      std::cerr << "Error reading from client" << std::endl;
+    std::string message = readFromSocket(clientDescriptor);
+    if (message.empty()) {
       break;
     }
-    message = std::string(buffer, bytesRead);
+
     parseMessage(message, clientDescriptor, &isRunning);
   }
 }
 
 void Server::parseMessage(std::string &message, int clientDescriptor,
                           bool *isRunning) {
+  std::string response;
   if (message.substr(0, 4) == "ECHO") {
-    write(clientDescriptor, message.substr(5).c_str(),
-          message.substr(5).size());
+    response = message.substr(5);
   } else if (message.substr(0, 4) == "QUIT") {
     std::cout << getCurrentTime() << " Client disconnected" << std::endl;
     *isRunning = false;
     close(clientDescriptor);
+    return;
   } else if (message.substr(0, 4) == "INFO") {
-    sendFileContents("./serverInfo.txt", clientDescriptor);
+    response = getFileContents("./serverInfo.txt");
   } else if (message.substr(0, 2) == "CD") {
     changeDirectory(message.substr(3), clientDescriptor);
+    return;
   } else if (message.substr(0, 4) == "LIST") {
     std::lock_guard<std::mutex> lock(mutex);
-    std::string list = listDirectory(".", "");
-    write(clientDescriptor, list.c_str(), list.size());
+    response = listDirectory(".", "");
   } else {
-    std::string error = "Invalid command";
-    write(clientDescriptor, error.c_str(), error.size());
+    response = "Invalid command";
   }
+
+  writeToSocket(clientDescriptor, response);
 }
 
 std::string Server::listDirectory(const std::string &path,
@@ -117,44 +115,49 @@ std::string Server::listDirectory(const std::string &path,
   return result;
 }
 
-void Server::sendFileContents(const std::string &filePath,
-                              int clientDescriptor) {
+std::string Server::getFileContents(const std::string &filePath) {
   std::ifstream file(filePath);
   if (!file.is_open()) {
-    std::string error = "Error opening file";
-    write(clientDescriptor, error.c_str(), error.size());
-    return;
+    return "Error opening file";
   }
-
-  std::string line;
-  while (std::getline(file, line)) {
-    line += '\n';
-    write(clientDescriptor, line.c_str(), line.size());
-  }
-
+  std::stringstream buffer;
+  buffer << file.rdbuf();
   file.close();
+  return buffer.str();
 }
 
 void Server::changeDirectory(const std::string &path, int clientDescriptor) {
+  std::string response;
   if (path.empty()) {
-    std::string error = "Invalid path";
-    write(clientDescriptor, error.c_str(), error.size());
+    response = "Invalid path";
+  } else {
+    std::filesystem::path fsPath(path);
+    if (!std::filesystem::exists(fsPath) ||
+        !std::filesystem::is_directory(fsPath)) {
+      response = "Path is not a directory";
+    } else {
+      std::error_code ec;
+      std::filesystem::current_path(fsPath, ec);
+      if (ec) {
+        response = "Error changing directory";
+      } else {
+        response = "Directory changed";
+      }
+    }
+  }
+
+  // Send the size of the response first
+  uint32_t responseSize =
+      htonl(response.size()); // Convert to network byte order
+  if (write(clientDescriptor, &responseSize, sizeof(responseSize)) == -1) {
+    std::cerr << "Error sending response size" << std::endl;
     return;
   }
 
-  struct stat pathStat;
-  if (stat(path.c_str(), &pathStat) != 0 || !S_ISDIR(pathStat.st_mode)) {
-    std::string error = "Path is not a directory";
-    write(clientDescriptor, error.c_str(), error.size());
-    return;
+  // Then send the response itself
+  if (write(clientDescriptor, response.c_str(), response.size()) == -1) {
+    std::cerr << "Error sending response" << std::endl;
   }
-
-  if (chdir(path.c_str()) != 0) {
-    std::string error = "Error changing directory";
-    write(clientDescriptor, error.c_str(), error.size());
-    return;
-  }
-  write(clientDescriptor, "Directory changed", 17);
 }
 
 std::string Server::getCurrentTime() const {
@@ -164,6 +167,41 @@ std::string Server::getCurrentTime() const {
   std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S",
                 std::localtime(&now_c));
   return std::string(buffer);
+}
+
+void Server::writeToSocket(int clientDescriptor, const std::string &message) {
+  uint32_t responseSize = htonl(message.size());
+  if (write(clientDescriptor, &responseSize, sizeof(responseSize)) == -1) {
+    std::cerr << "Error sending response size" << std::endl;
+    return;
+  }
+
+  if (write(clientDescriptor, message.c_str(), message.size()) == -1) {
+    std::cerr << "Error sending response" << std::endl;
+  }
+}
+
+std::string Server::readFromSocket(int clientDescriptor) {
+  uint32_t commandSize;
+  if (read(clientDescriptor, &commandSize, sizeof(commandSize)) == -1) {
+    std::cerr << "Error reading command size from client" << std::endl;
+    return "";
+  }
+  commandSize = ntohl(commandSize); // Convert from network byte order
+
+  char *buffer = new char[commandSize + 1];
+  int bytesRead = read(clientDescriptor, buffer, commandSize);
+  if (bytesRead == -1) {
+    std::cerr << "Error reading command from client" << std::endl;
+    delete[] buffer;
+    return "";
+  }
+  buffer[commandSize] = '\0'; // Null-terminate the string
+
+  std::string message(buffer, commandSize);
+  delete[] buffer;
+
+  return message;
 }
 
 Server::~Server() {

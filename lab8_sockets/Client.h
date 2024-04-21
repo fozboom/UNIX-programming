@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
 class Client {
   int clientDescriptor;
@@ -14,6 +15,9 @@ public:
   Client(const std::string &serverIP, int serverPort);
 
   void start();
+  std::string getCommandFromUser();
+  void sendCommandToServer(const std::string &command);
+  std::string getResponseFromServer();
 
   ~Client();
 };

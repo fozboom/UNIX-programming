@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -std=c++11
+CXXFLAGS = -W -Wall -Wno-unused-parameter -Wno-unused-variable -std=c++17
 
 all: server client
 

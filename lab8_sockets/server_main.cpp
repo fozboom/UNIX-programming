@@ -17,6 +17,17 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  std::thread inputThread([&server]() {
+    std::string line;
+    while (std::getline(std::cin, line)) {
+      if (line == "quit") {
+        server.stop();
+        break;
+      }
+    }
+  });
+
   server.start();
+  inputThread.join();
   return 0;
 }

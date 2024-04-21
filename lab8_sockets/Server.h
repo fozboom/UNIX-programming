@@ -32,12 +32,14 @@ public:
   void handleClient(int clientDescriptor);
   void parseMessage(std::string &message, int clientDescriptor,
                     bool *isRunning);
-  void sendFileContents(const std::string &filePath, int clientDescriptor);
+  std::string getFileContents(const std::string &filePath);
   void changeDirectory(const std::string &path, int clientDescriptor);
   int getServerDescriptor() const { return serverDescriptor; }
   std::string getCurrentTime() const;
   void stop() { isRunning = false; }
   std::string listDirectory(const std::string &path, const std::string &prefix);
+  void writeToSocket(int clientDescriptor, const std::string &message);
+  std::string readFromSocket(int clientDescriptor);
 
   ~Server();
 };
