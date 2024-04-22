@@ -4,8 +4,12 @@
 #include <unistd.h>
 
 Server::Server(int port) {
+  // SOCK_STREAM - передача потока данных, SOCK_DGRAM - передача датаграмм
+  // (неделимых пакетов данных), SOCK_SEQPACKET -
+  // передача потока данных с защитой
   serverDescriptor = socket(AF_INET, SOCK_STREAM, 0);
   if (serverDescriptor == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error creating socket" << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -16,11 +20,13 @@ Server::Server(int port) {
 
   if (bind(serverDescriptor, (struct sockaddr *)&serverAddress,
            sizeof(serverAddress)) == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error binding socket" << std::endl;
     exit(EXIT_FAILURE);
   }
 
   if (listen(serverDescriptor, 5) == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error listening on socket" << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -30,6 +36,7 @@ Server::Server(int port) {
 
 void Server::start() {
   if (fcntl(serverDescriptor, F_SETFL, O_NONBLOCK) < 0) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error setting socket to non-blocking mode" << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -40,18 +47,22 @@ void Server::start() {
         usleep(1000);
         continue;
       } else {
+        std::lock_guard<std::mutex> lock(output_mutex);
         std::cerr << "Error accepting connection" << std::endl;
         exit(EXIT_FAILURE);
       }
     }
-
-    std::cout << getCurrentTime() << " Client connected" << std::endl;
+    {
+      std::lock_guard<std::mutex> lock(output_mutex);
+      std::cout << getCurrentTime() << " Client connected" << std::endl;
+    }
 
     std::thread client_thread(
         [this](int client_descriptor) {
           this->handleClient(client_descriptor);
         },
         client_descriptor);
+    std::lock_guard<std::mutex> lock(clientThreads_mutex);
     clientThreads.push_back(std::move(client_thread));
   }
 }
@@ -74,6 +85,7 @@ void Server::parseMessage(std::string &message, int clientDescriptor,
   if (message.substr(0, 4) == "ECHO") {
     response = message.substr(5);
   } else if (message.substr(0, 4) == "QUIT") {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cout << getCurrentTime() << " Client disconnected" << std::endl;
     *isRunning = false;
     close(clientDescriptor);
@@ -84,7 +96,7 @@ void Server::parseMessage(std::string &message, int clientDescriptor,
     changeDirectory(message.substr(3), clientDescriptor);
     return;
   } else if (message.substr(0, 4) == "LIST") {
-    std::lock_guard<std::mutex> lock(mutex);
+
     response = listDirectory(".", "");
   } else if (message[0] == '@') {
     handleFileCommands(message.substr(1), clientDescriptor, isRunning);
@@ -136,6 +148,7 @@ void Server::handleFileCommands(const std::string &filename,
 }
 
 std::string Server::getFileContents(const std::string &filePath) {
+  std::lock_guard<std::mutex> lock(file_mutex);
   std::ifstream file(filePath);
   if (!file.is_open()) {
     return "Error opening file";
@@ -181,11 +194,13 @@ std::string Server::getCurrentTime() const {
 void Server::writeToSocket(int clientDescriptor, const std::string &message) {
   uint32_t responseSize = htonl(message.size());
   if (write(clientDescriptor, &responseSize, sizeof(responseSize)) == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error sending response size" << std::endl;
     return;
   }
 
   if (write(clientDescriptor, message.c_str(), message.size()) == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error sending response" << std::endl;
   }
 }
@@ -193,19 +208,21 @@ void Server::writeToSocket(int clientDescriptor, const std::string &message) {
 std::string Server::readFromSocket(int clientDescriptor) {
   uint32_t commandSize;
   if (read(clientDescriptor, &commandSize, sizeof(commandSize)) == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error reading command size from client" << std::endl;
     return "";
   }
-  commandSize = ntohl(commandSize); // Convert from network byte order
+  commandSize = ntohl(commandSize);
 
   char *buffer = new char[commandSize + 1];
   int bytesRead = read(clientDescriptor, buffer, commandSize);
   if (bytesRead == -1) {
+    std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "Error reading command from client" << std::endl;
     delete[] buffer;
     return "";
   }
-  buffer[commandSize] = '\0'; // Null-terminate the string
+  buffer[commandSize] = '\0';
 
   std::string message(buffer, commandSize);
   delete[] buffer;
@@ -214,6 +231,7 @@ std::string Server::readFromSocket(int clientDescriptor) {
 }
 
 Server::~Server() {
+  std::lock_guard<std::mutex> lock(clientThreads_mutex);
   for (auto &thread : clientThreads) {
     if (thread.joinable()) {
       thread.join();

@@ -23,7 +23,9 @@ class Server {
   struct sockaddr_in serverAddress;
   std::vector<std::thread> clientThreads;
   std::atomic<bool> isRunning;
-  std::mutex mutex;
+  std::mutex output_mutex;
+  std::mutex file_mutex;
+  std::mutex clientThreads_mutex;
 
 public:
   Server(int port);
@@ -32,6 +34,7 @@ public:
   void handleClient(int clientDescriptor);
   void parseMessage(std::string &message, int clientDescriptor,
                     bool *isRunning);
+
   std::string getFileContents(const std::string &filePath);
   void changeDirectory(const std::string &path, int clientDescriptor);
   int getServerDescriptor() const { return serverDescriptor; }
