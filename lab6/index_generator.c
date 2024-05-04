@@ -9,8 +9,8 @@
 #define MINUTES_IN_HOUR 60
 #define HOURS_IN_HALF_DAY 12
 
-double generateTimeMark();
-void generateIndexFile(uint64_t records, char *filename);
+double generate_time_mark();
+void generate_index_file(uint64_t records, char *filename);
 
 int main(int argc, char **argv)
 {
@@ -27,12 +27,12 @@ int main(int argc, char **argv)
 		printf("The number of records must be a multiple of 256\n");
 		exit(EXIT_FAILURE);
 	}
-	generateIndexFile(records, argv[2]);
+	generate_index_file(records, argv[2]);
 
 	return 0;
 }
 
-void generateIndexFile(uint64_t records, char *filename)
+void generate_index_file(uint64_t records, char *filename)
 {
 	srand(time(NULL));
 
@@ -52,7 +52,7 @@ void generateIndexFile(uint64_t records, char *filename)
 	for (uint64_t i = 0; i < hdr.records; i++)
 	{
 		hdr.idx[i].recno = i + 1; // первичный индекс заполняется последовательно с 1
-		hdr.idx[i].time_mark = generateTimeMark();
+		hdr.idx[i].time_mark = generate_time_mark();
 	}
 	FILE *fileDescriptor = fopen(filename, "wb");
 	if (fileDescriptor == NULL)
@@ -67,7 +67,7 @@ void generateIndexFile(uint64_t records, char *filename)
 	free(hdr.idx);
 }
 
-double generateTimeMark()
+double generate_time_mark()
 {
 	double time_mark = 0.0;
 	// генерация временной метки в диапазоне от 1 января 1900 года до вчерашнего дня

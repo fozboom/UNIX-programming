@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+void convert_mjd_to_date(double modified_julian_date, struct tm *date_structure);
+
 int main(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 
 		struct tm date;
 		convert_mjd_to_date(data->idx[i].time_mark, &date);
-		printf("%d-%02d-%02d\n\n", date.tm_year + 1900, date.tm_mon + 1, date.tm_mday);
+		printf("%02d-%02d-%d\n\n", date.tm_mday, date.tm_mon + 1, date.tm_year + 1900);
 	}
 
 	fclose(f);
@@ -63,6 +65,12 @@ int main(int argc, char *argv[])
 
 void convert_mjd_to_date(double modified_julian_date, struct tm *date_structure)
 {
+	// Преобразование модифицированной юлианской даты в количество секунд с начала эпохи Unix (1 января 1970 года)
 	time_t seconds_since_epoch = (time_t)((modified_julian_date - 40587.0) * 86400.0);
-	gmtime_r(&seconds_since_epoch, date_structure);
+
+	// Преобразование секунд с начала эпохи Unix в структуру tm, представляющую собой время в формате UTC
+	struct tm *temp_date_structure = gmtime(&seconds_since_epoch);
+
+	// Копирование временной структуры tm в структуру tm, на которую указывает аргумент функции
+	*date_structure = *temp_date_structure;
 }
