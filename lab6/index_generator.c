@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "index_data.h"
 
 #define START_DATE 15020
@@ -13,7 +14,7 @@ void generateIndexFile(uint64_t records, char *filename);
 
 int main(int argc, char **argv)
 {
-	if (argc != 2)
+	if (argc != 3)
 	{
 		printf("You must start the program:\n ./index_generator <number of entries> <filename>  \n");
 		exit(EXIT_FAILURE);
