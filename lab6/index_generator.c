@@ -9,6 +9,7 @@
 #define HOURS_IN_HALF_DAY 12
 
 double generateTimeMark();
+void generateIndexFile(uint64_t records, char *filename);
 
 int main(int argc, char **argv)
 {
@@ -17,8 +18,25 @@ int main(int argc, char **argv)
 		printf("You must start the program:\n ./index_generator <number of entries> <filename>  \n");
 		exit(EXIT_FAILURE);
 	}
+	srand(time(NULL));
+
+	uint64_t records = atoi(argv[1]);
+	if (records % 256 != 0)
+	{
+		printf("The number of records must be a multiple of 256\n");
+		exit(EXIT_FAILURE);
+	}
+	generateIndexFile(records, argv[2]);
+
+	return 0;
+}
+
+void generateIndexFile(uint64_t records, char *filename)
+{
+	srand(time(NULL));
+
 	index_hdr_s hdr;
-	hdr.records = atoi(argv[1]);
+	hdr.records = records;
 	if (hdr.records % 256 != 0)
 	{
 		printf("The number of records must be a multiple of 256\n");
@@ -35,7 +53,7 @@ int main(int argc, char **argv)
 		hdr.idx[i].recno = i + 1; // первичный индекс заполняется последовательно с 1
 		hdr.idx[i].time_mark = generateTimeMark();
 	}
-	FILE *fileDescriptor = fopen(argv[2], "wb");
+	FILE *fileDescriptor = fopen(filename, "wb");
 	if (fileDescriptor == NULL)
 	{
 		printf("Error opening file\n");
@@ -46,8 +64,6 @@ int main(int argc, char **argv)
 
 	fclose(fileDescriptor);
 	free(hdr.idx);
-
-	return 0;
 }
 
 double generateTimeMark()
