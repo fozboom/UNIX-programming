@@ -4,31 +4,31 @@ void check_arguments(int argc, char *argv[])
 {
 	if (argc != 5)
 	{
-		printf("You must start the program:\n ./sort_index <memsize> <blocks> <threads> <filename>  \n");
+		printf("You must start the program:\n ./sort_index <sort_record_count> <blocks> <threads> <filename>  \n");
 		exit(EXIT_FAILURE);
 	}
-	memsize = atoi(argv[1]);
-	blocks = atoi(argv[2]);
+	sort_record_count = atoi(argv[1]);
+	sort_block_count = atoi(argv[2]);
 	threads_count = atoi(argv[3]);
 	filename = argv[4];
 
-	if (memsize <= 0 || memsize % 4096 != 0)
+	if (sort_record_count < RECORD_SIZE || sort_record_count % RECORD_SIZE != 0)
 	{
-		printf("The memsize must be a multiple of 4096\n");
+		printf("The sort_record_count must be a multiple of 4096\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((blocks <= 0) || ((blocks & (blocks - 1)) != 0) || (blocks < threads_count))
+	if ((sort_block_count <= 0) || ((sort_block_count & (sort_block_count - 1)) != 0) || (sort_block_count < threads_count))
 	{
-		printf("The number of blocks must be a power of 2\n");
+		printf("The number of sort_block_count must be a power of 2\n");
 		exit(EXIT_FAILURE);
 	}
-	if (threads_count < 8 || threads_count > 64)
+	if (threads_count < MIN_THREADS || threads_count > MAX_THREADS)
 	{
 		printf("The number of threads must be between 8 and 64\n");
 		exit(EXIT_FAILURE);
 	}
-	printf("memsize %d\n", memsize);
-	printf("blocks %d\n", blocks);
+	printf("sort_record_count %d\n", sort_record_count);
+	printf("sort_block_count %d\n", sort_block_count);
 	printf("threads %d\n", threads_count);
 	printf("filename %s\n", filename);
 }
@@ -69,7 +69,7 @@ void *map_file_and_launch_threads(void *data)
 		perror(strerror(errno));
 		exit(errno);
 	}
-	file_in_memory += sizeof(uint64_t); // Пропустить кол-во
+	file_in_memory += sizeof(uint64_t);
 	int record_count = (file_size - sizeof(uint64_t)) / sizeof(index_record);
 	printf("record count %d\n", record_count);
 	index_record *end = (index_record *)(file_in_memory) + record_count;
@@ -83,20 +83,20 @@ void *map_file_and_launch_threads(void *data)
 		{
 			thread_data *data = (thread_data *)malloc(sizeof(thread_data));
 			data->thread_num = i;
-			data->block_size = memsize / blocks;
+			data->block_size = sort_record_count / sort_block_count;
 			data->buffer = currentBlock;
 
-			if (pthread_create(&threads[i - 1], NULL, sort_block, data) != 0)
+			if (pthread_create(&threads[i - 1], NULL, sort_and_merge_block, data) != 0)
 			{
 				printf("Error creating thread\n");
 				exit(errno);
 			}
 		}
 		thread_data *tmp = (thread_data *)malloc(sizeof(thread_data));
-		tmp->block_size = (memsize / blocks);
+		tmp->block_size = (sort_record_count / sort_block_count);
 		tmp->thread_num = 0;
 		tmp->buffer = currentBlock;
-		sort_block(tmp);
+		sort_and_merge_block(tmp);
 		for (int i = 1; i < threads_count; i++)
 		{
 			if (pthread_join(threads[i - 1], NULL) != 0)
@@ -141,7 +141,7 @@ void merge_blocks(index_record *left, index_record *right, index_record *temp, i
 	}
 }
 
-int compare(const void *a, const void *b)
+int compare_index_records(const void *a, const void *b)
 {
 	if (((index_record *)a)->time_mark < ((index_record *)b)->time_mark)
 		return -1;
@@ -151,21 +151,32 @@ int compare(const void *a, const void *b)
 		return 0;
 }
 
-void *sort_block(void *data)
+void *sort_and_merge_block(void *data)
 {
 	thread_data *args = (thread_data *)data;
 	pthread_barrier_wait(&barrier);
 
-	while (currentBlock <= args->buffer + memsize)
+	sort_individual_block(args);
+	merge_sorted_blocks(args);
+
+	pthread_mutex_unlock(&mutex);
+	pthread_barrier_wait(&barrier);
+
+	return 0;
+}
+
+void sort_individual_block(thread_data *args)
+{
+	while (currentBlock <= args->buffer + sort_record_count)
 	{
 		pthread_mutex_lock(&mutex);
 
-		if (currentBlock <= args->buffer + memsize)
+		if (currentBlock <= args->buffer + sort_record_count)
 		{
 			index_record *block = currentBlock;
 			currentBlock += args->block_size;
 			pthread_mutex_unlock(&mutex);
-			qsort(block, args->block_size, sizeof(index_record), compare);
+			qsort(block, args->block_size, sizeof(index_record), compare_index_records);
 		}
 		else
 		{
@@ -174,35 +185,21 @@ void *sort_block(void *data)
 			break;
 		}
 	}
-	pthread_barrier_wait(&barrier);
+}
+
+void merge_sorted_blocks(thread_data *args)
+{
 	int count_blocks_to_merge = 2;
-	while (count_blocks_to_merge <= blocks)
+	while (count_blocks_to_merge <= sort_block_count)
 	{
 		pthread_barrier_wait(&barrier);
 		currentBlock = args->buffer;
-		while (currentBlock < args->buffer + memsize)
+		while (currentBlock < args->buffer + sort_record_count)
 		{
 			pthread_mutex_lock(&mutex);
-			if (currentBlock < args->buffer + memsize)
+			if (currentBlock < args->buffer + sort_record_count)
 			{
-				index_record *block = currentBlock;
-				currentBlock += args->block_size * count_blocks_to_merge;
-				pthread_mutex_unlock(&mutex);
-				int merge_block_size = args->block_size * (count_blocks_to_merge / 2);
-				index_record *left = (index_record *)malloc(merge_block_size * sizeof(index_record));
-				index_record *right = (index_record *)malloc(merge_block_size * sizeof(index_record));
-				if (left == NULL || right == NULL)
-				{
-					printf("Error allocating memory\n");
-					exit(errno);
-				}
-				memcpy(left, block, merge_block_size * sizeof(index_record));
-				memcpy(right, block + merge_block_size, merge_block_size * sizeof(index_record));
-
-				merge_blocks(left, right, block, merge_block_size);
-
-				free(left);
-				free(right);
+				merge_individual_blocks(args, count_blocks_to_merge);
 			}
 			else
 			{
@@ -212,10 +209,28 @@ void *sort_block(void *data)
 		}
 		count_blocks_to_merge *= 2;
 	}
-	pthread_mutex_unlock(&mutex);
-	pthread_barrier_wait(&barrier);
+}
 
-	return 0;
+void merge_individual_blocks(thread_data *args, int count_blocks_to_merge)
+{
+	index_record *block = currentBlock;
+	currentBlock += args->block_size * count_blocks_to_merge;
+	pthread_mutex_unlock(&mutex);
+	int merge_block_size = args->block_size * (count_blocks_to_merge / 2);
+	index_record *left = (index_record *)malloc(merge_block_size * sizeof(index_record));
+	index_record *right = (index_record *)malloc(merge_block_size * sizeof(index_record));
+	if (left == NULL || right == NULL)
+	{
+		printf("Error allocating memory\n");
+		exit(errno);
+	}
+	memcpy(left, block, merge_block_size * sizeof(index_record));
+	memcpy(right, block + merge_block_size, merge_block_size * sizeof(index_record));
+
+	merge_blocks(left, right, block, merge_block_size);
+
+	free(left);
+	free(right);
 }
 
 void convert_mjd_to_date(double modified_julian_date, struct tm *date_structure)

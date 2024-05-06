@@ -6,8 +6,8 @@ index_hdr_s hdr;
 
 index_record *currentBlock;
 
-int memsize;
-int blocks;
+int sort_record_count;
+int sort_block_count;
 int threads_count;
 char *filename;
 int main(int argc, char **argv)
