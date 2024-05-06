@@ -16,15 +16,15 @@ int main(int argc, char **argv)
 {
 	if (argc != 3)
 	{
-		printf("You must start the program:\n ./index_generator <number of entries> <filename>  \n");
+		printf("You must start the program:\n ./index_generator <number of entries> <output file>\n");
 		exit(EXIT_FAILURE);
 	}
 	srand(time(NULL));
 
-	uint64_t records = atoi(argv[1]);
+	uint64_t records = atoll(argv[1]);
 	if (records % 256 != 0)
 	{
-		printf("The number of records must be a multiple of 256\n");
+		printf("The file size must be a multiple of 16 bytes\n");
 		exit(EXIT_FAILURE);
 	}
 	generate_index_file(records, argv[2]);

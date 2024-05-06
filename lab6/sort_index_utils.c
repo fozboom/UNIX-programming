@@ -9,7 +9,7 @@ void check_arguments(int argc, char *argv[])
 	}
 	memsize = atoi(argv[1]);
 	blocks = atoi(argv[2]);
-	threads = atoi(argv[3]);
+	threads_count = atoi(argv[3]);
 	filename = argv[4];
 
 	if (memsize <= 0 || memsize % 4096 != 0)
@@ -17,16 +17,20 @@ void check_arguments(int argc, char *argv[])
 		printf("The memsize must be a multiple of 4096\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((blocks <= 0) || ((blocks & (blocks - 1)) != 0) || (blocks < threads))
+	if ((blocks <= 0) || ((blocks & (blocks - 1)) != 0) || (blocks < threads_count))
 	{
 		printf("The number of blocks must be a power of 2\n");
 		exit(EXIT_FAILURE);
 	}
-	if (threads < 16 || threads > 8000)
+	if (threads_count < 8 || threads_count > 64)
 	{
-		printf("The number of threads must be between 16 and 8000\n");
+		printf("The number of threads must be between 8 and 64\n");
 		exit(EXIT_FAILURE);
 	}
+	printf("memsize %d\n", memsize);
+	printf("blocks %d\n", blocks);
+	printf("threads %d\n", threads_count);
+	printf("filename %s\n", filename);
 }
 
 void initialize_mutex_and_barrier()
@@ -36,7 +40,7 @@ void initialize_mutex_and_barrier()
 		printf("Error creating mutex\n");
 		exit(errno);
 	}
-	if (pthread_barrier_init(&barrier, NULL, threads) != 0)
+	if (pthread_barrier_init(&barrier, NULL, threads_count) != 0)
 	{
 		printf("Error creating barrier\n");
 		exit(errno);
@@ -53,6 +57,8 @@ void *map_file_and_launch_threads(void *data)
 	}
 	fseek(file, 0, SEEK_END);
 	size_t file_size = ftell(file);
+	printf("file size %ld\n", file_size);
+	printf("count of records %ld\n", (file_size - sizeof(uint64_t)) / sizeof(index_record));
 	fseek(file, 0, SEEK_SET);
 
 	int file_descriptor = fileno(file);
@@ -61,21 +67,22 @@ void *map_file_and_launch_threads(void *data)
 	if (file_in_memory == MAP_FAILED)
 	{
 		printf("Error mapping file\n");
-		perror(errno);
+		perror(strerror(errno));
 		exit(errno);
 	}
+	file_in_memory += sizeof(uint64_t); // Пропустить кол-во
 
-	file_in_memory = (uint64_t *)file_in_memory + 1; // Пропустить кол-во структур
-	currentBlock = (index_record *)file_in_memory;
-	pthread_t threads[threads - 1];
-	for (int i = 1; i < threads; i++)
+	currentBlock = (index_record *)(file_in_memory);
+
+	pthread_t threads[threads_count - 1];
+	for (int i = 1; i < threads_count; i++)
 	{
 		thread_data *data = (thread_data *)malloc(sizeof(thread_data));
 		data->thread_num = i;
 		data->block_size = memsize / blocks;
-		data->buffer = (index_record *)file_in_memory;
+		data->buffer = currentBlock;
 
-		if (pthread_create(&threads[i - 1], NULL, sort_block, (void *)data) != 0)
+		if (pthread_create(&threads[i - 1], NULL, sort_block, data) != 0)
 		{
 			printf("Error creating thread\n");
 			exit(errno);
@@ -86,7 +93,7 @@ void *map_file_and_launch_threads(void *data)
 	tmp->thread_num = 0;
 	tmp->buffer = (index_record *)file_in_memory;
 	sort_block(tmp);
-	for (int i = 1; i < threads; i++)
+	for (int i = 1; i < threads_count; i++)
 	{
 		if (pthread_join(threads[i - 1], NULL) != 0)
 		{
@@ -94,6 +101,7 @@ void *map_file_and_launch_threads(void *data)
 			exit(errno);
 		}
 	}
+
 	munmap(file_in_memory, file_size);
 
 	fclose(file);
@@ -128,15 +136,26 @@ void merge_blocks(index_record *left, index_record *right, index_record *temp, i
 	}
 }
 
+int compare(const void *a, const void *b)
+{
+	if (((index_record *)a)->time_mark < ((index_record *)b)->time_mark)
+		return -1;
+	else if (((index_record *)a)->time_mark > ((index_record *)b)->time_mark)
+		return 1;
+	else
+		return 0;
+}
+
 void *sort_block(void *data)
 {
 	thread_data *args = (thread_data *)data;
 	pthread_barrier_wait(&barrier);
 
-	while (currentBlock < args->buffer + memsize)
+	while (currentBlock <= args->buffer + memsize)
 	{
 		pthread_mutex_lock(&mutex);
-		if (currentBlock < args->buffer + memsize)
+
+		if (currentBlock <= args->buffer + memsize)
 		{
 			index_record *block = currentBlock;
 			currentBlock += args->block_size;
@@ -150,7 +169,7 @@ void *sort_block(void *data)
 			break;
 		}
 	}
-
+	pthread_barrier_wait(&barrier);
 	int count_blocks_to_merge = 2;
 	while (count_blocks_to_merge <= blocks)
 	{
@@ -192,19 +211,6 @@ void *sort_block(void *data)
 	pthread_barrier_wait(&barrier);
 
 	return 0;
-}
-
-int compare(const void *a, const void *b)
-{
-	index_record *recordA = (index_record *)a;
-	index_record *recordB = (index_record *)b;
-
-	if (recordA->time_mark < recordB->time_mark)
-		return -1;
-	else if (recordA->time_mark > recordB->time_mark)
-		return 1;
-	else
-		return 0;
 }
 
 void convert_mjd_to_date(double modified_julian_date, struct tm *date_structure)

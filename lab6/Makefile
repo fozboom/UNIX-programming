@@ -8,14 +8,12 @@ DEPS = index_data.h sort_index_utils.h
 index_generator: index_generator.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-read_index: read_index.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 sort_index: sort_index.o sort_index_utils.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 
-all: index_generator read_index sort_index
+all: index_generator sort_index
 
 
 .PHONY: clean all

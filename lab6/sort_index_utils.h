@@ -23,7 +23,7 @@ extern index_hdr_s hdr;
 extern index_record *currentBlock;
 extern int memsize;
 extern int blocks;
-extern int threads;
+extern int threads_count;
 extern char *filename;
 
 void check_arguments(int argc, char *argv[]);

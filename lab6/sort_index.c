@@ -8,7 +8,7 @@ index_record *currentBlock;
 
 int memsize;
 int blocks;
-int threads;
+int threads_count;
 char *filename;
 int main(int argc, char **argv)
 {
