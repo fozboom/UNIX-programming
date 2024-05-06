@@ -58,7 +58,6 @@ void *map_file_and_launch_threads(void *data)
 	fseek(file, 0, SEEK_END);
 	size_t file_size = ftell(file);
 	printf("file size %ld\n", file_size);
-	printf("count of records %ld\n", (file_size - sizeof(uint64_t)) / sizeof(index_record));
 	fseek(file, 0, SEEK_SET);
 
 	int file_descriptor = fileno(file);
@@ -71,34 +70,40 @@ void *map_file_and_launch_threads(void *data)
 		exit(errno);
 	}
 	file_in_memory += sizeof(uint64_t); // Пропустить кол-во
+	int record_count = (file_size - sizeof(uint64_t)) / sizeof(index_record);
+	printf("record count %d\n", record_count);
+	index_record *end = (index_record *)(file_in_memory) + record_count;
 
 	currentBlock = (index_record *)(file_in_memory);
-
-	pthread_t threads[threads_count - 1];
-	for (int i = 1; i < threads_count; i++)
+	while (currentBlock < end)
 	{
-		thread_data *data = (thread_data *)malloc(sizeof(thread_data));
-		data->thread_num = i;
-		data->block_size = memsize / blocks;
-		data->buffer = currentBlock;
 
-		if (pthread_create(&threads[i - 1], NULL, sort_block, data) != 0)
+		pthread_t threads[threads_count - 1];
+		for (int i = 1; i < threads_count; i++)
 		{
-			printf("Error creating thread\n");
-			exit(errno);
+			thread_data *data = (thread_data *)malloc(sizeof(thread_data));
+			data->thread_num = i;
+			data->block_size = memsize / blocks;
+			data->buffer = currentBlock;
+
+			if (pthread_create(&threads[i - 1], NULL, sort_block, data) != 0)
+			{
+				printf("Error creating thread\n");
+				exit(errno);
+			}
 		}
-	}
-	thread_data *tmp = (thread_data *)malloc(sizeof(thread_data));
-	tmp->block_size = (memsize / blocks);
-	tmp->thread_num = 0;
-	tmp->buffer = (index_record *)file_in_memory;
-	sort_block(tmp);
-	for (int i = 1; i < threads_count; i++)
-	{
-		if (pthread_join(threads[i - 1], NULL) != 0)
+		thread_data *tmp = (thread_data *)malloc(sizeof(thread_data));
+		tmp->block_size = (memsize / blocks);
+		tmp->thread_num = 0;
+		tmp->buffer = currentBlock;
+		sort_block(tmp);
+		for (int i = 1; i < threads_count; i++)
 		{
-			printf("Error joining thread\n");
-			exit(errno);
+			if (pthread_join(threads[i - 1], NULL) != 0)
+			{
+				printf("Error joining thread\n");
+				exit(errno);
+			}
 		}
 	}
 
