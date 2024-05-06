@@ -10,7 +10,7 @@
 #define HOURS_IN_HALF_DAY 12
 
 double generate_time_mark();
-void generate_index_file(uint64_t records, char *filename);
+void generate_index_file(uint64_t count_of_records, char *filename);
 
 int main(int argc, char **argv)
 {
@@ -21,23 +21,23 @@ int main(int argc, char **argv)
 	}
 	srand(time(NULL));
 
-	uint64_t records = atoll(argv[1]);
-	if (records % 256 != 0)
+	uint64_t count_of_records = atoll(argv[1]);
+	if (count_of_records % 256 != 0)
 	{
 		printf("The file size must be a multiple of 16 bytes\n");
 		exit(EXIT_FAILURE);
 	}
-	generate_index_file(records, argv[2]);
+	generate_index_file(count_of_records, argv[2]);
 
 	return 0;
 }
 
-void generate_index_file(uint64_t records, char *filename)
+void generate_index_file(uint64_t count_of_records, char *filename)
 {
 	srand(time(NULL));
 
 	index_hdr_s hdr;
-	hdr.records = records;
+	hdr.records = count_of_records;
 	if (hdr.records % 256 != 0)
 	{
 		printf("The number of records must be a multiple of 256\n");
