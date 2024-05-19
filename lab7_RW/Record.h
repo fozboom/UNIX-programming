@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#define COUNT_RECORDS 10
 
-typedef struct Record {
+typedef struct Record
+{
     char name[80];
     char address[80];
-    uint8_t semester;
+    int semester;
 } Record;

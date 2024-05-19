@@ -8,7 +8,7 @@
 #define RESET_COLOR "\x1b[0m"
 #define RED_COLOR "\x1b[31m"
 #define GREEN_COLOR "\x1b[32m"
-#define COUNT_RECORDS 10
+
 
 extern int file_descriptor;
 extern bool record_modified;
