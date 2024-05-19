@@ -32,7 +32,7 @@ int open_file(const char *filename)
     return 0;
 }
 
-int lock_file(int file_descriptor, int record_number, struct flock *lock_params)
+void lock_file_write_and_read(int file_descriptor, int record_number, struct flock *lock_params)
 {
     lock_params->l_type = F_WRLCK;
     lock_params->l_whence = SEEK_SET;
@@ -41,23 +41,34 @@ int lock_file(int file_descriptor, int record_number, struct flock *lock_params)
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file lock failed\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
-    return 0;
 }
 
-int unlock_file(int file_descriptor, struct flock *lock_params)
+void lock_file_read(int file_descriptor, int record_number, struct flock *lock_params)
+{
+    lock_params->l_type = F_RDLCK;
+    lock_params->l_whence = SEEK_SET;
+    lock_params->l_start = (record_number - 1) * sizeof(Record);
+    lock_params->l_len = sizeof(Record);
+    if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
+    {
+        perror("Error: file lock failed\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void unlock_file(int file_descriptor, struct flock *lock_params)
 {
     lock_params->l_type = F_UNLCK;
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file unlock failed\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
-    return 0;
 }
 
-int lock_file_whole(int file_descriptor, struct flock *lock_params)
+void lock_file_whole(int file_descriptor, struct flock *lock_params)
 {
     lock_params->l_type = F_RDLCK;
     lock_params->l_whence = SEEK_SET;
@@ -66,18 +77,19 @@ int lock_file_whole(int file_descriptor, struct flock *lock_params)
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file lock failed\n");
-        return -1;
-    }
-    return 0;
-}
-
-int print_file_content()
-{
-    struct flock lock_params;
-    if (lock_file_whole(file_descriptor, &lock_params) == -1)
-    {
         exit(EXIT_FAILURE);
     }
+}
+
+bool is_record_number_valid(int record_number)
+{
+    return record_number > 0 && record_number <= COUNT_RECORDS;
+}
+
+void print_file_content()
+{
+    struct flock lock_params;
+    lock_file_whole(file_descriptor, &lock_params);
     int record_number = 1;
     printf(GREEN_COLOR);
     Record record;
@@ -88,17 +100,8 @@ int print_file_content()
     }
     printf(RESET_COLOR);
     sleep(10);
-    if (unlock_file(file_descriptor, &lock_params) == -1)
-    {
-        exit(EXIT_FAILURE);
-    }
+    unlock_file(file_descriptor, &lock_params);
     lseek(file_descriptor, 0, SEEK_SET);
-    return 0;
-}
-
-bool is_record_number_valid(int record_number)
-{
-    return record_number > 0 && record_number <= COUNT_RECORDS;
 }
 
 void get_record(int record_number, Record *record)
@@ -111,19 +114,11 @@ void get_record(int record_number, Record *record)
         return;
     }
     struct flock lock_params;
-    if (lock_file(file_descriptor, record_number, &lock_params) == -1)
-    {
-        exit(EXIT_FAILURE);
-    }
+    lock_file_read(file_descriptor, record_number, &lock_params);
     lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
     read(file_descriptor, record, sizeof(Record));
-    strcpy(record_copy.name, record->name);
-    strcpy(record_copy.address, record->address);
-    record_copy.semester = record->semester;
-    if (unlock_file(file_descriptor, &lock_params) == -1)
-    {
-        exit(EXIT_FAILURE);
-    }
+    sleep(3);
+    unlock_file(file_descriptor, &lock_params);
     lseek(file_descriptor, 0, SEEK_SET);
 }
 
@@ -132,29 +127,8 @@ bool records_are_equal(Record record1, Record record2)
     return strcmp(record1.name, record2.name) == 0 && strcmp(record1.address, record2.address) == 0 && record1.semester == record2.semester;
 }
 
-void modify_record(int record_number)
+void get_record_input()
 {
-    if (!is_record_number_valid(record_number))
-    {
-        printf(RED_COLOR);
-        printf("Error: record number must be greater than 0\n");
-        printf(RESET_COLOR);
-        return;
-    }
-
-    struct flock lock_params;
-    if (lock_file(file_descriptor, record_number, &lock_params) == -1)
-    {
-        exit(EXIT_FAILURE);
-    }
-
-    lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
-    read(file_descriptor, &record, sizeof(Record));
-
-    strcpy(record_copy.name, record.name);
-    strcpy(record_copy.address, record.address);
-    record_copy.semester = record.semester;
-
     printf("Enter the name: ");
     fgets(record.name, sizeof(record.name), stdin);
     record.name[strcspn(record.name, "\n")] = 0;
@@ -169,6 +143,33 @@ void modify_record(int record_number)
     while ((c = getchar()) != '\n' && c != EOF)
     {
     }
+}
+
+void copy_record(Record *record1, Record *record2)
+{
+    strcpy(record1->name, record2->name);
+    strcpy(record1->address, record2->address);
+    record1->semester = record2->semester;
+}
+
+void modify_record(int record_number)
+{
+    if (!is_record_number_valid(record_number))
+    {
+        printf(RED_COLOR);
+        printf("Error: record number must be greater than 0\n");
+        printf(RESET_COLOR);
+        return;
+    }
+
+    struct flock lock_params;
+    lock_file_write_and_read(file_descriptor, record_number, &lock_params);
+    lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
+    read(file_descriptor, &record, sizeof(Record));
+
+    copy_record(&record_copy, &record);
+
+    get_record_input();
 
     if (!records_are_equal(record, record_copy))
     {
@@ -181,11 +182,8 @@ void modify_record(int record_number)
         printf("Error: record has not been modified\n");
         printf(RESET_COLOR);
     }
-    sleep(5);
-    if (unlock_file(file_descriptor, &lock_params) == -1)
-    {
-        exit(EXIT_FAILURE);
-    }
+    sleep(3);
+    unlock_file(file_descriptor, &lock_params);
     lseek(file_descriptor, 0, SEEK_SET);
 }
 
@@ -202,18 +200,14 @@ void put_record(int record_number)
     if (record_modified)
     {
         struct flock lock_params;
-        if (lock_file(file_descriptor, record_number, &lock_params) == -1)
-        {
-            exit(EXIT_FAILURE);
-        }
+        lock_file_write_and_read(file_descriptor, record_number, &lock_params);
 
         get_record(record_number, &record_new);
+        // print_record(record_new, record_number);
+        // print_record(record_copy, record_number);
         if (!records_are_equal(record_copy, record_new))
         {
-            if (unlock_file(file_descriptor, &lock_params) == -1)
-            {
-                exit(EXIT_FAILURE);
-            }
+            unlock_file(file_descriptor, &lock_params);
             printf(RED_COLOR);
             printf("Record has been modified by another user\n");
             printf(RESET_COLOR);
@@ -223,10 +217,7 @@ void put_record(int record_number)
         write(file_descriptor, &record, sizeof(Record));
         record_modified = false;
 
-        if (unlock_file(file_descriptor, &lock_params) == -1)
-        {
-            exit(EXIT_FAILURE);
-        }
+        unlock_file(file_descriptor, &lock_params);
         lseek(file_descriptor, 0, SEEK_SET);
         record_modified = false;
     }
@@ -289,7 +280,6 @@ void processUserInput()
                 return;
             }
             modify_record(userInput.argument);
-            printf("Record has been modified fdsfds\n");
             last_record_number = userInput.argument;
         }
         else if (strcmp(userInput.command, "PUT") == 0)
