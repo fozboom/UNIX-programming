@@ -41,7 +41,7 @@ void lock_file_write_and_read(int file_descriptor, int record_number, struct flo
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file lock failed\n");
-        exit(EXIT_FAILURE);
+        exit_function();
     }
 }
 
@@ -54,7 +54,7 @@ void lock_file_read(int file_descriptor, int record_number, struct flock *lock_p
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file lock failed\n");
-        exit(EXIT_FAILURE);
+        exit_function();
     }
 }
 
@@ -64,7 +64,7 @@ void unlock_file(int file_descriptor, struct flock *lock_params)
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file unlock failed\n");
-        exit(EXIT_FAILURE);
+        exit_function();
     }
 }
 
@@ -77,7 +77,7 @@ void lock_file_whole(int file_descriptor, struct flock *lock_params)
     if (fcntl(file_descriptor, F_SETLKW, lock_params) == -1)
     {
         perror("Error: file lock failed\n");
-        exit(EXIT_FAILURE);
+        exit_function();
     }
 }
 
@@ -86,14 +86,55 @@ bool is_record_number_valid(int record_number)
     return record_number > 0 && record_number <= COUNT_RECORDS;
 }
 
+void exit_function()
+{
+    close(file_descriptor);
+    exit(EXIT_FAILURE);
+}
+
+int read_info_to_record()
+{
+    int bytes_to_read = sizeof(record);
+    int bytes_read = 0;
+    while (bytes_read < bytes_to_read)
+    {
+        int currentBytes = read(file_descriptor, &record + bytes_read, bytes_to_read - bytes_read);
+        if (currentBytes == -1)
+        {
+            perror("Error: file read failed\n");
+            exit_function();
+        }
+        else if (currentBytes == 0)
+        {
+            return 0;
+        }
+        bytes_read += currentBytes;
+    }
+    return bytes_read;
+}
+
+void write_record_to_file()
+{
+    int bytes_to_write = sizeof(record);
+    for (int bytes_wrote = 0; bytes_wrote < bytes_to_write;)
+    {
+        int currentWroteBytes = write(file_descriptor, &record + bytes_wrote, bytes_to_write - bytes_wrote);
+        if (currentWroteBytes == 1)
+        {
+            perror("Error: file write failed");
+            exit_function();
+        }
+        bytes_wrote += currentWroteBytes;
+    }
+}
+
 void print_file_content()
 {
     struct flock lock_params;
     lock_file_whole(file_descriptor, &lock_params);
     int record_number = 1;
     printf(GREEN_COLOR);
-    Record record;
-    while (read(file_descriptor, &record, sizeof(Record)) > 0)
+    while (read_info_to_record())
     {
         print_record(record, record_number);
         record_number++;
@@ -117,7 +158,7 @@ void get_record(int record_number, Record *record)
     lock_file_read(file_descriptor, record_number, &lock_params);
     lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
     read(file_descriptor, record, sizeof(Record));
-    sleep(3);
+    // sleep(3);
     unlock_file(file_descriptor, &lock_params);
     lseek(file_descriptor, 0, SEEK_SET);
 }
@@ -165,7 +206,7 @@ void modify_record(int record_number)
     struct flock lock_params;
     lock_file_write_and_read(file_descriptor, record_number, &lock_params);
     lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
-    read(file_descriptor, &record, sizeof(Record));
+    read_info_to_record();
 
     copy_record(&record_copy, &record);
 
@@ -203,8 +244,7 @@ void put_record(int record_number)
         lock_file_write_and_read(file_descriptor, record_number, &lock_params);
 
         get_record(record_number, &record_new);
-        // print_record(record_new, record_number);
-        // print_record(record_copy, record_number);
+
         if (!records_are_equal(record_copy, record_new))
         {
             unlock_file(file_descriptor, &lock_params);
@@ -214,7 +254,7 @@ void put_record(int record_number)
             return;
         }
         lseek(file_descriptor, (record_number - 1) * sizeof(Record), SEEK_SET);
-        write(file_descriptor, &record, sizeof(Record));
+        write_record_to_file();
         record_modified = false;
 
         unlock_file(file_descriptor, &lock_params);

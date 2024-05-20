@@ -13,10 +13,6 @@ int main()
     {
         exit(EXIT_FAILURE);
     }
-    char input[100];
-    do
-    {
-        print_menu();
-        processUserInput();
-    } while (continue_flag);
+    print_menu();
+    processUserInput();
 }

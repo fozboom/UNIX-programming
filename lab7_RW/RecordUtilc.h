@@ -25,3 +25,4 @@ int open_file(const char *filename);
 void print_menu();
 void print_file_content();
 void processUserInput();
+void exit_function();
